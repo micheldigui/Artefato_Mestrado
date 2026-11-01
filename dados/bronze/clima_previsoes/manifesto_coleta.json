@@ -1,0 +1,21 @@
+{
+  "coletado_em": "2026-10-31T15:31:29",
+  "previous_runs_linhas": 24840,
+  "single_runs_linhas": 23808,
+  "single_runs_cobertura": {
+    "gfs_global": {
+      "sextas": 31,
+      "primeira": "2026-04-03",
+      "ultima": "2026-10-30"
+    },
+    "ecmwf_ifs025": {
+      "sextas": 31,
+      "primeira": "2026-04-03",
+      "ultima": "2026-10-30"
+    }
+  },
+  "arquivos": {
+    "previous_runs_horario.csv": "062211d3a68dd6891dd111a4ca5b4082d2b4c09d156d003c016e5084d4c25d97",
+    "single_runs_horario.csv": "3ead2c51728ccb1346601097329e0922bcdd78c61e4af83016b01473d4c86470"
+  }
+}

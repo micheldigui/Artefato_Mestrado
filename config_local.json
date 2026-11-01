@@ -1,0 +1,9 @@
+{
+  "latitude": -23.4861,
+  "longitude": -46.3483,
+  "timezone": "America/Sao_Paulo",
+  "valor_refeicao": {
+    "2026": 14.0,
+    "ate_2025": 17.36
+  }
+}

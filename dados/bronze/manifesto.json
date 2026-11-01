@@ -1,0 +1,105 @@
+{
+  "gerado_em": "2026-10-31T15:30:54",
+  "arquivos": [
+    {
+      "arquivo": "calendario/calendario2023.csv",
+      "bytes": 16606,
+      "sha256": "e270d3cbfbb2f3a9b9dbe5a06e262bd010618656e9b1b26211ca3d2dfa911567"
+    },
+    {
+      "arquivo": "calendario/calendario2024.csv",
+      "bytes": 16756,
+      "sha256": "e1e915f05b74f8b7811959abd2be80167c713f7ce107fb0ddb7fc8374293ecd9"
+    },
+    {
+      "arquivo": "calendario/calendario2025.csv",
+      "bytes": 17106,
+      "sha256": "32c893d28d0ef2da1a5b9e5c28c7a87df21aa24de1c0cef961d7f3b55cdf41cd"
+    },
+    {
+      "arquivo": "calendario/calendario2026.csv",
+      "bytes": 17121,
+      "sha256": "f80a8af6b1fd9d49e05100e48c2dff341b856b8b7928b2a6fb9987343a15e759"
+    },
+    {
+      "arquivo": "cardapio/cardapio_2023.csv",
+      "bytes": 20218,
+      "sha256": "69b9aa1f1b1e7375c18e4b74e90ae4bbe9a13fcbecc9d4330b54938259070f1d"
+    },
+    {
+      "arquivo": "cardapio/cardapio_2024.csv",
+      "bytes": 21513,
+      "sha256": "a179de4b61ef4b8e0acb4b5f18768f2505cd52aa62554d5c713adf4135b02f31"
+    },
+    {
+      "arquivo": "cardapio/cardapio_2025.csv",
+      "bytes": 19881,
+      "sha256": "98513f4c98b587ae0c34bbaccd239597bec6ef05e2c58aff771362ce4e6d4984"
+    },
+    {
+      "arquivo": "cardapio/cardapio_2026.csv",
+      "bytes": 19674,
+      "sha256": "875e6ae4304de7b1fc2294d593fcae5f00d35466841df23b3dcb297b060997f0"
+    },
+    {
+      "arquivo": "clima/clima_historico.csv",
+      "bytes": 107614,
+      "sha256": "8ec5b2906bd9968e3e765c8e0a2bb41cd46eb2f765ab968e3a505ee817ac2f68"
+    },
+    {
+      "arquivo": "clima/clima_previsao_16dias.csv",
+      "bytes": 1515,
+      "sha256": "092ba58d2517a6795cadffbffca1be02334f1218f61f410e6e0da80cc38f061d"
+    },
+    {
+      "arquivo": "consumo/consumo_outubro_novembro_2026.csv",
+      "bytes": 2115,
+      "sha256": "aa8342dadc5b768432fc8ee7c37518d6ca12cd5890eb8c0f5b9af43de8d7eecb"
+    },
+    {
+      "arquivo": "consumo/consumo_por_data_2023.csv",
+      "bytes": 9856,
+      "sha256": "560ace2b7fc7cdbf566e7e016565d7348e139233f784de7efa9278a65a4925bf"
+    },
+    {
+      "arquivo": "consumo/consumo_por_data_2024.csv",
+      "bytes": 9910,
+      "sha256": "8b45df0bfbb982ca1da089023b3700c808d2ede57ccfa420b42cfb9bb3e4d9b2"
+    },
+    {
+      "arquivo": "consumo/consumo_por_data_2025.csv",
+      "bytes": 9877,
+      "sha256": "a7630af683065421775ae8755afd8b436b7af468b1d7cc44301970e9019b91d0"
+    },
+    {
+      "arquivo": "consumo/consumo_por_data_2026.csv",
+      "bytes": 10856,
+      "sha256": "efb02f71c33166e48401cd36fda61a7c194a919db5581ffc3653e30408b9276a"
+    },
+    {
+      "arquivo": "consumo/consumo_setembro_2026.csv",
+      "bytes": 1705,
+      "sha256": "564c360f53a7a95cbe031d7ac9d0233dccd7fde1361b95b3003ce3fd5c2a8081"
+    },
+    {
+      "arquivo": "reservas/reservas_2023.csv",
+      "bytes": 9807,
+      "sha256": "794d4858f5ef1447e4743f83dee6857b668855d883a1723ac0f9097eb0fb5196"
+    },
+    {
+      "arquivo": "reservas/reservas_2024.csv",
+      "bytes": 9903,
+      "sha256": "28ff0537aba1c88508b2f6a16994eb6e7ec0ede6208aa6d98a159397a07d8086"
+    },
+    {
+      "arquivo": "reservas/reservas_2025.csv",
+      "bytes": 9836,
+      "sha256": "21018738d26513015f722513f1869e1f054214b7967ee8c36d811c8cd7a617ed"
+    },
+    {
+      "arquivo": "reservas/reservas_2026.csv",
+      "bytes": 10855,
+      "sha256": "b38f9cf5a34aca4aa5242252e1e0aab3d79c43d31f7bde1ef80124509306e63f"
+    }
+  ]
+}
