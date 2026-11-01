@@ -109,3 +109,4 @@ Testes inclusos:
 
 Desenvolvido para fins de pesquisa acadêmica e modernização da gestão pública em restaurantes estudantis.  
 Autor: **Michel Silva de Souza** ([micheldigui](https://github.com/micheldigui)).
+
