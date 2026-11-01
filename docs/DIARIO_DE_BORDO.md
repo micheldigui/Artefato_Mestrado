@@ -158,9 +158,22 @@
 
 ---
 
-### [Planejamento Próximos Passos]
-* **Marco 6:** Desenvolvimento da Aplicação Streamlit Modular (`src/app/`):
-  * Estruturação modular com páginas: Visão Geral Executiva, Simulador Walk-Forward, Compras Quinzenais T+2, Auditoria de Não-Vazamento e Cadastro Operacional.
-  * Integração da tabela de custos e margens conformais interativas.
-* **Marco 7:** Consolidação do relatório de atualização da Dissertação (mapeamento numérico das tabelas e figuras prontas para inserção nos Capítulos 4 e 5).
+### [Entrada #006] – 01/11/2026: Aplicação Web Streamlit, Testes Automatizados e Conclusão do Artefato DSR
+* **Contexto e Motivação:**
+  * Entrega do software operacional interativo exigido pela metodologia *Design Science Research* (DSR) para a nutricionista e os gestores da instituição pública.
+  * Validação formal automatizada via `pytest` cobrindo integridade de dados, artefatos acadêmicos, sintaxe do app e a auditoria matemática adversarial de *Zero Data Leakage*.
+* **Ações Executadas:**
+  1. **Aplicação Web Interativa (`src/app/main.py` e `executar_app.py`):**
+     * Interface moderna com design responsivo (Pills de navegação, Altair charts, CSS institucional verde `#008744`).
+     * **Aba 1 (Visão Executiva & Histórico):** KPIs dinâmicos, filtros de dias letivos/semana, série temporal interativa e galeria das 12 figuras da EDA.
+     * **Aba 2 (Preparo Diário T+1):** Desempenho retrospectivo do torneio, simulador interativo de margens conformais (slider de buffer de segurança) e custo financeiro a R$ 14,00/ref.
+     * **Aba 3 (Compras Quinzenais T+2):** Projeção autônoma sem plano humano para pedidos quinzenais com antecedência licitatória.
+     * **Aba 4 (Auditoria de Não-Vazamento):** Painel de integridade com botão para reexecutar testes adversariais ao vivo para a banca examinadora.
+     * **Aba 5 (Resiliência Climática & Teste Cego):** Análise do modelo congelado em 31/08/2026 e resiliência frente às inundações de setembro.
+  2. **Suíte de Testes Automatizados (`pytest`):**
+     * Criação de `tests/test_zero_leakage.py`, `tests/test_data_integrity.py` e `tests/test_app_syntax.py`.
+     * 100% de aprovação (4/4 testes aprovados com sucesso).
+* **Decisões Técnicas Registradas:**
+  * O artefato está plenamente operacional, auditado, reprodutível e pronto tanto para uso em campo quanto para defesa na banca examinadora.
+
 
