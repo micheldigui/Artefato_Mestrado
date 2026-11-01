@@ -72,9 +72,30 @@
 
 ---
 
+### [Entrada #003] – 01/11/2026: Análise Exploratória (EDA) e Comparativo dos Regimes Humanos
+* **Contexto e Motivação:**
+  * Necessidade de investigar empiricamente quais variáveis realmente governam a demanda de refeições e avaliar as diferenças estruturais entre o regime de Reservas Discentes (2023-2025) e o Planejamento Técnico da Nutricionista (2026).
+  * Obter as evidências estatísticas para embasar a justificativa teórica dos 4 cenários que entrarão no torneio de modelos.
+* **Ações Executadas:**
+  1. **Módulo de EDA (`src/core/eda.py`):**
+     * Cálculo comparativo de métricas de acurácia, viés e risco de falta entre reservas discentes e quantitativo institucional.
+     * Ranking de correlações lineares (Pearson) e relativas (descontando o nível basal) para os 18 atributos preditores candidatos.
+     * Mapeamento de sazonalidade semanal e efeito de desmobilização no término do período acadêmico.
+     * Geração de 5 tabelas analíticas em `resultados/eda/` e 5 figuras em alta resolução em `resultados/figuras/eda/`.
+  2. **Principais Descobertas Científicas:**
+     * *O Dilema Humano:* As reservas discentes (2023-2025) sofriam de **subnotificação crônica** (viés médio de -15.8 refeições, WAPE de 19.9% e risco de falta em 65.6% dos dias). O planejamento da nutricionista (2026) elevou a correlação para $r=0.772$, reduziu o WAPE para 13.6% e opera com **superestimativa protetiva intencional** (+10.4 refeições) para mitigar o risco social.
+     * *Preditores Críticos:* Nível basal recente ($r=0.658$), inércia do mesmo dia da semana anterior ($r=0.656$) e dias restantes até o término do semestre ($r=0.334$) são os motores principais do consumo.
+     * *Desmobilização de Fim de Semestre:* Nos últimos 3 dias letivos do semestre, o consumo médio desaba em **56.1%** (de 149.0 para 65.4 refeições), comprovando a importância da feature ordinal de calendário.
+     * *Desmistificação do Clima:* Previsões de chuva ($r=+0.041$) e temperatura máxima ($r=-0.029$) possuem correlação linear insignificante com o consumo ordinário escolar, justificando testar o clima como cenário complementar, sem torná-lo dependência obrigatória.
+  3. **Notebook 03:**
+     * Criação de `notebooks/03_analise_exploratoria_eda.ipynb` com narrativa detalhada e inclusão das figuras salvas.
+* **Decisões Técnicas Registradas:**
+  * *Decisão:* Os 4 cenários de modelagem para o torneio Walk-Forward ficam formalmente justificados pelas evidências da EDA: Cenário 1 (Calendário + Nível Basal - autônomo), Cenário 2 (+ Cardápio), Cenário 3 (+ Clima - teste não-linear) e Cenário 4 (+ Nutricionista - abordagem híbrida colaborativa).
+
+---
+
 ### [Planejamento Próximos Passos]
-* **Marco 3:** Análise Exploratória de Dados (EDA) e isolamento dos fatores de influência (cardápio, dia da semana, calendário e clima).
-* **Marco 4:** Torneio de Algoritmos em Validação Walk-Forward (12 meses de treino) comparando Baselines, Modelos Lineares, Árvores e Boosting.
+* **Marco 4:** Torneio de Algoritmos em Validação Walk-Forward (12 meses de treino) comparando Baselines, Modelos Lineares, Árvores e Boosting em $T+1$ e $T+2$.
 * **Marco 5:** Modelo Híbrido Adaptativo (IA + Nutricionista) e Calibração de Margens de Segurança Conformal (+12 a +18 refeições).
 * **Marco 6:** Desenvolvimento da Aplicação Streamlit Modular (`src/app/`) com Simulador Interativo, Visão Executiva e Módulo de Compras.
 * **Marco 7:** Validação Prospectiva em 2026, exportação de tabelas/figuras finais e fechamento das evidências empíricas da dissertação.

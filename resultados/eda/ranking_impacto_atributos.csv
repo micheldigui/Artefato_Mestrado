@@ -1,0 +1,19 @@
+﻿Grupo;Atributo;Descrição;Corr_2023_2025;Corr_2026;Corr_Geral;Corr_Relativa;Impacto_Absoluto
+Nível Basal;nivel_base;Mediana móvel ponderada recente (10d + mesmo dia);0.613;0.49;0.658;-0.051;0.6577072102638295
+Nível Basal;mesmo_dia_ha_1_ocorrencias;Consumo do mesmo dia da semana na semana anterior;0.599;0.563;0.656;0.077;0.6560573070673918
+Nível Basal;media_5d;Média móvel de consumo dos últimos 5 dias normais;0.585;0.259;0.604;-0.003;0.6036468627807825
+Nível Basal;nivel_exponencial;Média móvel exponencial causal (alfa=0.2);0.58;0.243;0.599;-0.042;0.5991135095067375
+Nível Basal;nivel_10d;Mediana móvel dos 10 dias normais anteriores;0.557;0.177;0.572;-0.091;0.5717483327191123
+Nível Basal;ultimo_consumo;Último consumo diário observado antes da sexta;0.441;0.305;0.464;0.05;0.46432720045049597
+Calendário;dias_ate_fim_bloco;Dias letivos restantes até o recesso/término de semestre;0.33;0.391;0.334;0.345;0.3338104899988374
+Calendário;dias_letivos_na_semana;Quantidade de dias de aula na semana da refeição;0.176;0.414;0.202;0.206;0.20210379186658084
+Cardápio;efeito_proteina;Razão histórica suavizada por Bayes da proteína do dia;0.236;0.18;0.153;-0.023;0.15252524837053605
+Cardápio;efeito_preparo;Razão histórica suavizada do método de preparo;0.204;0.006;0.1;0.008;0.10001070704720405
+Cardápio;efeito_prato;Razão histórica suavizada do prato principal padronizado;0.043;0.153;0.096;0.044;0.09560235390884776
+Clima Previsto;previsao_chuva_manha_mm;Volume de chuva previsto entre 6h e 13h;-0.047;0.089;0.078;0.094;0.07769663838072051
+Clima Previsto;previsao_chuva_acum3d_mm;Volume de chuva acumulado previsto em 3 dias;-0.006;0.023;0.053;0.147;0.05255707367925058
+Clima Previsto;previsao_chuva_mm;Volume total de chuva previsto para o dia;-0.07;0.092;0.041;0.113;0.0413818889895628
+Clima Oráculo;oraculo_temp_max;Temperatura máxima real observada (ex-post);0.022;-0.02;-0.036;0.107;0.036306634788407455
+Clima Oráculo;oraculo_chuva_mm;Chuva real observada na estação (ex-post);-0.106;-0.026;-0.029;-0.001;0.029373158053209773
+Clima Previsto;previsao_temp_max;Temperatura máxima prevista pela API meteorológica;0.026;0.027;-0.029;0.073;0.029300369349915624
+Calendário;dias_desde_inicio_bloco;Dias letivos transcorridos desde o início do período;0.024;0.186;0.024;0.053;0.024122066847639585
