@@ -2458,7 +2458,7 @@ elif pagina_ativa == "Compras & Suprimentos":
             "Ajuda a equipe de suprimentos a dimensionar pedidos quinzenais de carnes congeladas, arroz, feijão e faturamento contratual."
         ),
         como_foi_feito_ciencia=(
-            "**Modelo Preditivo para Longo Prazo (Cenário 2: Cenário 1 + Clima via Open-Meteo):** "
+            "**Modelo Preditivo para Longo Prazo (Cenário 3: Base + Cardápio + Clima via Open-Meteo):** "
             "A 14 dias de distância, o cardápio exato do dia ainda não está fechado. "
             "A pesquisa provou que cruzar o histórico recente com o calendário escolar e a previsão meteorológica estendida de satélite gera a melhor estimativa para compras antecipadas."
         ),
@@ -2500,7 +2500,7 @@ elif pagina_ativa == "Compras & Suprimentos":
                 key="cfg_mar_sup"
             )
 
-    cenario_sup = "Cenário 3 (Cenário 2 + Quantitativo Institucional)" if "Híbrido" in modelo_sup else "Cenário 2 (Cenário 1 + Clima Open-Meteo)"
+    cenario_sup = "Cenário 4 (Integração Nutricionista / Modelo Híbrido)" if "Híbrido" in modelo_sup else "Cenário 3 (Base + Cardápio + Clima Open-Meteo)"
     modelo_nome_exec = "Modelo Híbrido (IA + Nutricionista)" if "Híbrido" in modelo_sup else "Modelo Matemático Estável (Ridge)"
 
     df_t2, df_feat_t2 = executar_pipeline_previsao(
