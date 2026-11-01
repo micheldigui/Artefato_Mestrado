@@ -271,18 +271,66 @@ def processar_prospectivo(df_completo: pd.DataFrame) -> Tuple[pd.DataFrame, pd.D
     m_nutri = calcular_metricas_completas(sub_nutri["consumo_real"].values, sub_nutri["plano_nutricionista"].values)
     linhas_prosp.append({
         "Configuracao": "Nutricionista Institucional",
-        "Tipo": "Humano",
+        "Tipo": "Especialista Humano",
+        "Regime": "Referência Operacional",
         "Recorte": "Bimestre Completo (N=28)",
         **m_nutri
     })
+
+    # --- 1.1. Avaliação Rigorosa: Modelo Campeão CONGELADO em 31/08/2026 (Sem retreinamento) ---
+    gold_t1 = pd.read_parquet(GOLD / "gold_t1.parquet")
+    from .models import definir_cenarios_features, criar_pipeline_arvore
+    from sklearn.ensemble import ExtraTreesRegressor
     
+    cols = [c for c in definir_cenarios_features()["Cenario_2_Com_Cardapio"] if c in gold_t1.columns]
+    tr_congelado = gold_t1[(gold_t1["data"] < "2026-09-01") & (gold_t1["ano"] >= 2025) & gold_t1["usar_no_treino"] & gold_t1["consumo"].notna()].copy()
+    X_tr = tr_congelado[cols]
+    y_tr = tr_congelado["alvo_relativo"].clip(0.2, 2.5)
+    
+    modelo_congelado = criar_pipeline_arvore(ExtraTreesRegressor(n_estimators=80, min_samples_leaf=5, random_state=SEMENTE_ALEATORIA, n_jobs=1))
+    modelo_congelado.fit(X_tr, y_tr)
+    
+    te_congelado = gold_t1[(gold_t1["data"] >= "2026-09-01") & (gold_t1["data"] <= "2026-10-31") & gold_t1["usar_no_treino"] & gold_t1["consumo"].notna()].copy()
+    X_te = te_congelado[cols]
+    base_te = te_congelado["nivel_base"].values
+    y_te = te_congelado["consumo"].values
+    nutri_te = te_congelado["plano_nutricionista"].values
+    
+    pred_ia_congelada = np.floor(np.clip(modelo_congelado.predict(X_te), 0.2, 2.5) * base_te + 0.5)
+    pred_hib_congelado = np.floor(0.5 * pred_ia_congelada + 0.5 * nutri_te + 0.5)
+    pred_hib_conf_congelado = pred_hib_congelado + 12
+    
+    linhas_prosp.append({
+        "Configuracao": "IA Campeã Congelada em 31/08 (ExtraTrees)",
+        "Tipo": "Machine Learning (Congelado)",
+        "Regime": "Teste Cego Out-of-Time Estrito",
+        "Recorte": "Bimestre Completo (N=28)",
+        **calcular_metricas_completas(y_te, pred_ia_congelada)
+    })
+    linhas_prosp.append({
+        "Configuracao": "Modelo Híbrido 50/50 (IA Congelada + Nutri)",
+        "Tipo": "Híbrido IA+Humano (Congelado)",
+        "Regime": "Teste Cego Out-of-Time Estrito",
+        "Recorte": "Bimestre Completo (N=28)",
+        **calcular_metricas_completas(y_te, pred_hib_congelado)
+    })
+    linhas_prosp.append({
+        "Configuracao": "Híbrido Congelado +12 ref (Conformal P85)",
+        "Tipo": "Híbrido com Margem (Congelado)",
+        "Regime": "Teste Cego Out-of-Time Estrito",
+        "Recorte": "Bimestre Completo (N=28)",
+        **calcular_metricas_completas(y_te, pred_hib_conf_congelado)
+    })
+    
+    # --- 1.2. Modelos com Retreinamento Semanal Contínuo (Rolling Walk-Forward) ---
     for alg in modelos_foco:
         g = df_prosp[(df_prosp["horizonte"] == "t1") & (df_prosp["cenario"] == "Cenario_2_Com_Cardapio") & (df_prosp["algoritmo"] == alg)].sort_values("data")
         if not g.empty:
             m = calcular_metricas_completas(g["consumo_real"].values, g["previsao"].values)
             linhas_prosp.append({
-                "Configuracao": f"IA: {alg}",
-                "Tipo": "Machine Learning",
+                "Configuracao": f"IA: {alg} (Walk-Forward)",
+                "Tipo": "Machine Learning (Rolling WF)",
+                "Regime": "Retreinamento Semanal",
                 "Recorte": "Bimestre Completo (N=28)",
                 **m
             })
@@ -367,8 +415,8 @@ def processar_prospectivo(df_completo: pd.DataFrame) -> Tuple[pd.DataFrame, pd.D
             "Período": "Retrospectivo (Fev-Ago/2026)",
             "Natureza": "Validação Walk-Forward Contínua",
             "N_Dias": 121,
-            "Nutricionista_MAE": df_desempenho_prosp.loc[df_desempenho_prosp["Configuracao"]=="Nutricionista Institucional", "MAE"].values[0] if False else 24.86,
-            "Nutricionista_WAPE": "14.2%",
+            "Nutricionista_MAE": 24.86,
+            "Nutricionista_WAPE": "14.20%",
             "Melhor_IA_MAE": 21.66,
             "Melhor_IA_WAPE": "12.38%",
             "Hibrido_50_MAE": 21.43,
@@ -377,8 +425,21 @@ def processar_prospectivo(df_completo: pd.DataFrame) -> Tuple[pd.DataFrame, pd.D
             "Conformal_P85_Sobra_Custo_RS": "R$ 27.916,00"
         },
         {
-            "Período": "Prospectivo (Set-Out/2026) - Regular",
-            "Natureza": "Teste Cego / Out-of-Time",
+            "Período": "Prospectivo (Set-Out/2026) - Modelo Congelado",
+            "Natureza": "Teste Cego Out-of-Time Estrito (Congelado em 31/08)",
+            "N_Dias": 28,
+            "Nutricionista_MAE": round(calcular_metricas_completas(y_te, nutri_te)["MAE"], 2),
+            "Nutricionista_WAPE": f"{calcular_metricas_completas(y_te, nutri_te)['WAPE_pct']}%",
+            "Melhor_IA_MAE": round(calcular_metricas_completas(y_te, pred_ia_congelada)["MAE"], 2),
+            "Melhor_IA_WAPE": f"{calcular_metricas_completas(y_te, pred_ia_congelada)['WAPE_pct']}%",
+            "Hibrido_50_MAE": round(calcular_metricas_completas(y_te, pred_hib_congelado)["MAE"], 2),
+            "Hibrido_50_WAPE": f"{calcular_metricas_completas(y_te, pred_hib_congelado)['WAPE_pct']}%",
+            "Conformal_P85_Deficit_Dias": f"{calcular_metricas_completas(y_te, pred_hib_conf_congelado)['Taxa_Deficit_pct']}%",
+            "Conformal_P85_Sobra_Custo_RS": f"R$ {calcular_metricas_completas(y_te, pred_hib_conf_congelado)['Custo_Potencial_Sobras_RS']:,.2f}"
+        },
+        {
+            "Período": "Prospectivo (Set-Out/2026) - Dias Regulares",
+            "Natureza": "Operação Padrão sem Inundações",
             "N_Dias": 23,
             "Nutricionista_MAE": round(calcular_metricas_completas(y_reg, p_reg_nutri)["MAE"], 2),
             "Nutricionista_WAPE": f"{calcular_metricas_completas(y_reg, p_reg_nutri)['WAPE_pct']}%",
@@ -470,7 +531,7 @@ def gerar_figuras_dissertacao(df_completo: pd.DataFrame) -> None:
     ax.set_ylim(0, 35)
     ax.legend(frameon=True, loc="upper right")
     plt.tight_layout()
-    fig.savefig(PASTA_FIGURAS / "figura_18_ablation_cenarios_horizontes_retrospectivo.png")
+    fig.savefig(str(PASTA_FIGURAS / "figura_18_ablation_cenarios_horizontes_retrospectivo.png"))
     plt.close(fig)
 
     # -------------------------------------------------------------
@@ -531,7 +592,7 @@ def gerar_figuras_dissertacao(df_completo: pd.DataFrame) -> None:
     ax.set_xlim(0, 42)
     ax.legend(frameon=True, loc="lower right")
     plt.tight_layout()
-    fig.savefig(PASTA_FIGURAS / "figura_19_confronto_taxonomia_ensembles_retrospectivo.png")
+    fig.savefig(str(PASTA_FIGURAS / "figura_19_confronto_taxonomia_ensembles_retrospectivo.png"))
     plt.close(fig)
 
     # -------------------------------------------------------------
@@ -566,7 +627,7 @@ def gerar_figuras_dissertacao(df_completo: pd.DataFrame) -> None:
     
     plt.suptitle("Figura 20: Confronto de Dispersão: Estimativa Humana vs. Machine Learning (Retrospectivo 2026)", fontsize=12)
     plt.tight_layout()
-    fig.savefig(PASTA_FIGURAS / "figura_20_modelos_vs_nutricionista_t1_retrospectivo.png")
+    fig.savefig(str(PASTA_FIGURAS / "figura_20_modelos_vs_nutricionista_t1_retrospectivo.png"))
     plt.close(fig)
 
     # -------------------------------------------------------------
@@ -592,7 +653,7 @@ def gerar_figuras_dissertacao(df_completo: pd.DataFrame) -> None:
     
     plt.suptitle("Figura 21: Fronteira de Eficiência Operacional do Modelo Híbrido Adaptativo ($T+1$)", fontsize=12)
     plt.tight_layout()
-    fig.savefig(PASTA_FIGURAS / "figura_21_fronteira_equilibrio_modelo_hibrido_retrospectivo.png")
+    fig.savefig(str(PASTA_FIGURAS / "figura_21_fronteira_equilibrio_modelo_hibrido_retrospectivo.png"))
     plt.close(fig)
 
     # -------------------------------------------------------------
@@ -621,7 +682,7 @@ def gerar_figuras_dissertacao(df_completo: pd.DataFrame) -> None:
     
     plt.suptitle("Figura 22: Calibração de Margens Conformais de Segurança no Retrospectivo 2026", fontsize=12)
     plt.tight_layout()
-    fig.savefig(PASTA_FIGURAS / "figura_22_margens_seguranca_conformal_retrospectivo.png")
+    fig.savefig(str(PASTA_FIGURAS / "figura_22_margens_seguranca_conformal_retrospectivo.png"))
     plt.close(fig)
 
     # -------------------------------------------------------------
@@ -660,7 +721,7 @@ def gerar_figuras_dissertacao(df_completo: pd.DataFrame) -> None:
     ax2.legend(frameon=True, loc="upper right")
     
     plt.tight_layout()
-    fig.savefig(PASTA_FIGURAS / "figura_24_serie_temporal_bimestre_set_out_chuva_vs_consumo.png")
+    fig.savefig(str(PASTA_FIGURAS / "figura_24_serie_temporal_bimestre_set_out_chuva_vs_consumo.png"))
     plt.close(fig)
 
     # -------------------------------------------------------------
@@ -682,7 +743,7 @@ def gerar_figuras_dissertacao(df_completo: pd.DataFrame) -> None:
                         ha="center", va="bottom", fontsize=8.5, fontweight="bold", xytext=(0, 2), textcoords="offset points")
                         
     plt.tight_layout()
-    fig.savefig(PASTA_FIGURAS / "figura_25_confronto_diario_setembro_enchentes_ia_vs_nutri.png")
+    fig.savefig(str(PASTA_FIGURAS / "figura_25_confronto_diario_setembro_enchentes_ia_vs_nutri.png"))
     plt.close(fig)
 
     # -------------------------------------------------------------
@@ -706,7 +767,7 @@ def gerar_figuras_dissertacao(df_completo: pd.DataFrame) -> None:
     ax.set_title("Figura 26: Desempenho Diário na Operação de Outubro de 2026 (Estabilidade e Alta Acurácia)")
     ax.legend(frameon=True, loc="upper right")
     plt.tight_layout()
-    fig.savefig(PASTA_FIGURAS / "figura_26_validacao_outubro_estabilidade.png")
+    fig.savefig(str(PASTA_FIGURAS / "figura_26_validacao_outubro_estabilidade.png"))
     plt.close(fig)
 
     # -------------------------------------------------------------
@@ -715,14 +776,17 @@ def gerar_figuras_dissertacao(df_completo: pd.DataFrame) -> None:
     fig, ax = plt.subplots(figsize=(9, 4.8))
     df_prosp_met = pd.read_csv(PASTA_TABELAS / "tabela_07_desempenho_prospectivo_set_out.csv", sep=";")
     
-    sub_p = df_prosp_met[df_prosp_met["Configuracao"].isin([
+    ordem_desejada = [
         "Nutricionista Institucional",
-        "IA: Ensemble_Bagging_ExtraTrees",
-        "Modelo Híbrido 50/50",
-        "Modelo Híbrido +12 ref (Conformal P85)"
-    ])]
+        "IA Campeã Congelada em 31/08 (ExtraTrees)",
+        "Modelo Híbrido 50/50 (IA Congelada + Nutri)",
+        "Híbrido Congelado +12 ref (Conformal P85)"
+    ]
+    sub_p = df_prosp_met[df_prosp_met["Configuracao"].isin(ordem_desejada)].copy()
+    sub_p["ordem"] = sub_p["Configuracao"].map({nome: i for i, nome in enumerate(ordem_desejada)})
+    sub_p = sub_p.sort_values("ordem").reset_index(drop=True)
     
-    labels_b = ["Nutricionista", "IA Pura", "Híbrido 50/50", "Híbrido +12"]
+    labels_b = ["Nutricionista", "IA Congelada", "Híbrido Congelado", "Híbrido Cong. +12"]
     x = np.arange(len(labels_b))
     width = 0.35
     
@@ -742,7 +806,7 @@ def gerar_figuras_dissertacao(df_completo: pd.DataFrame) -> None:
     ax.set_xticklabels(labels_b)
     ax.legend(frameon=True)
     plt.tight_layout()
-    fig.savefig(PASTA_FIGURAS / "figura_27_balanco_sobras_faltas_prospectivo.png")
+    fig.savefig(str(PASTA_FIGURAS / "figura_27_balanco_sobras_faltas_prospectivo.png"))
     plt.close(fig)
 
     # -------------------------------------------------------------
@@ -775,7 +839,7 @@ def gerar_figuras_dissertacao(df_completo: pd.DataFrame) -> None:
     ax.set_title("Figura 23: Curva de Trade-off: Risco de Desabastecimento vs. Custo de Sobras (Retrospectivo 2026)")
     ax.legend(frameon=True, loc="upper right")
     plt.tight_layout()
-    fig.savefig(PASTA_FIGURAS / "figura_23_tradeoff_sobras_deficits_custo_retrospectivo.png")
+    fig.savefig(str(PASTA_FIGURAS / "figura_23_tradeoff_sobras_deficits_custo_retrospectivo.png"))
     plt.close(fig)
 
     # -------------------------------------------------------------
@@ -784,13 +848,13 @@ def gerar_figuras_dissertacao(df_completo: pd.DataFrame) -> None:
     fig, ax = plt.subplots(figsize=(10, 4.8))
     df_sint = pd.read_csv(PASTA_TABELAS / "tabela_10_sintese_comparativa_retrospectivo_vs_prospectivo.csv", sep=";")
     
-    cat_labels = ["Retrospectivo\n(Fev-Ago / N=121)", "Prospectivo Regular\n(Set-Out / N=23)", "Prospectivo Enchentes\n(Setembro / N=5)"]
+    cat_labels = ["Retrospectivo\n(Fev-Ago / N=121)", "Prospectivo Congelado\n(Set-Out / N=28)", "Prospectivo Enchentes\n(Setembro / N=5)"]
     x = np.arange(len(cat_labels))
     w = 0.25
     
-    nutri_vals = [24.86, 11.00, 136.60]
-    ia_vals = [21.66, 11.73, 106.04]
-    hib_vals = [21.43, 8.36, 121.20]
+    nutri_vals = [24.86, 22.14, 136.60]
+    ia_vals = [21.66, 18.29, 106.04]
+    hib_vals = [21.43, 17.36, 121.20]
     
     r1 = ax.bar(x - w, nutri_vals, w, label="Nutricionista Institucional", color="#d62728", edgecolor="black")
     r2 = ax.bar(x, ia_vals, w, label="Melhor IA (Machine Learning)", color="#1f77b4", edgecolor="black")
@@ -807,7 +871,7 @@ def gerar_figuras_dissertacao(df_completo: pd.DataFrame) -> None:
     ax.set_xticklabels(cat_labels)
     ax.legend(frameon=True, loc="upper left")
     plt.tight_layout()
-    fig.savefig(PASTA_FIGURAS / "figura_28_sintese_retrospectivo_vs_prospectivo.png")
+    fig.savefig(str(PASTA_FIGURAS / "figura_28_sintese_retrospectivo_vs_prospectivo.png"))
     plt.close(fig)
 
     print("[OK] Todas as figuras acadêmicas geradas e salvas em 'resultados/figuras/dissertacao/'.")

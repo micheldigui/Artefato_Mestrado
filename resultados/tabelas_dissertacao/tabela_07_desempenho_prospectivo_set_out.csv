@@ -1,9 +1,12 @@
-﻿Configuracao;Tipo;Recorte;n_dias;MAE;RMSE;R2;WAPE_pct;Sobra_Total_ref;Deficit_Total_ref;Dias_com_Deficit;Taxa_Deficit_pct;Dias_com_Sobra;Taxa_Sobra_pct;Saldo_Operacional_ref;Custo_Potencial_Sobras_RS
-Nutricionista Institucional;Humano;Bimestre Completo (N=28);28;22.14;30.46;-1.71;11.1;289;331;11 (39.3%);39.3;17 (60.7%);60.7;-42;4046.0
-IA: Ensemble_Bagging_ExtraTrees;Machine Learning;Bimestre Completo (N=28);28;15.18;17.78;0.077;7.61;136;289;19 (67.9%);67.9;8 (28.6%);28.6;-153;1904.0
-IA: Ensemble_Voting_Heterogeneo;Machine Learning;Bimestre Completo (N=28);28;15.82;19.4;-0.099;7.93;133;310;17 (60.7%);60.7;10 (35.7%);35.7;-177;1862.0
-IA: Ridge;Machine Learning;Bimestre Completo (N=28);28;22.04;30.7;-1.753;11.04;133;484;18 (64.3%);64.3;10 (35.7%);35.7;-351;1862.0
-IA: Lasso;Machine Learning;Bimestre Completo (N=28);28;17.14;21.12;-0.303;8.59;142;338;18 (64.3%);64.3;9 (32.1%);32.1;-196;1988.0
-IA: Ensemble_Boosting_Gradient;Machine Learning;Bimestre Completo (N=28);28;14.07;18.68;-0.019;7.05;247;147;13 (46.4%);46.4;15 (53.6%);53.6;100;3458.0
-Modelo Híbrido 50/50;Híbrido IA+Humano;Bimestre Completo (N=28);28;14.46;19.37;-0.096;7.25;157;248;16 (57.1%);57.1;10 (35.7%);35.7;-91;2198.0
-Modelo Híbrido +12 ref (Conformal P85);Híbrido com Margem;Bimestre Completo (N=28);28;16.68;21.0;-0.288;8.36;356;111;6 (21.4%);21.4;21 (75.0%);75.0;245;4984.0
+﻿Configuracao;Tipo;Regime;Recorte;n_dias;MAE;RMSE;R2;WAPE_pct;Sobra_Total_ref;Deficit_Total_ref;Dias_com_Deficit;Taxa_Deficit_pct;Dias_com_Sobra;Taxa_Sobra_pct;Saldo_Operacional_ref;Custo_Potencial_Sobras_RS
+Nutricionista Institucional;Especialista Humano;Referência Operacional;Bimestre Completo (N=28);28;22.14;30.46;-1.71;11.1;289;331;11 (39.3%);39.3;17 (60.7%);60.7;-42;4046.0
+IA Campeã Congelada em 31/08 (ExtraTrees);Machine Learning (Congelado);Teste Cego Out-of-Time Estrito;Bimestre Completo (N=28);28;18.29;22.58;-0.49;9.16;112;400;20 (71.4%);71.4;7 (25.0%);25.0;-288;1568.0
+Modelo Híbrido 50/50 (IA Congelada + Nutri);Híbrido IA+Humano (Congelado);Teste Cego Out-of-Time Estrito;Bimestre Completo (N=28);28;17.36;23.81;-0.657;8.7;163;323;16 (57.1%);57.1;11 (39.3%);39.3;-160;2282.0
+Híbrido Congelado +12 ref (Conformal P85);Híbrido com Margem (Congelado);Teste Cego Out-of-Time Estrito;Bimestre Completo (N=28);28;19.14;23.96;-0.677;9.59;356;180;8 (28.6%);28.6;19 (67.9%);67.9;176;4984.0
+IA: Ensemble_Bagging_ExtraTrees (Walk-Forward);Machine Learning (Rolling WF);Retreinamento Semanal;Bimestre Completo (N=28);28;15.18;17.78;0.077;7.61;136;289;19 (67.9%);67.9;8 (28.6%);28.6;-153;1904.0
+IA: Ensemble_Voting_Heterogeneo (Walk-Forward);Machine Learning (Rolling WF);Retreinamento Semanal;Bimestre Completo (N=28);28;15.82;19.4;-0.099;7.93;133;310;17 (60.7%);60.7;10 (35.7%);35.7;-177;1862.0
+IA: Ridge (Walk-Forward);Machine Learning (Rolling WF);Retreinamento Semanal;Bimestre Completo (N=28);28;22.04;30.7;-1.753;11.04;133;484;18 (64.3%);64.3;10 (35.7%);35.7;-351;1862.0
+IA: Lasso (Walk-Forward);Machine Learning (Rolling WF);Retreinamento Semanal;Bimestre Completo (N=28);28;17.14;21.12;-0.303;8.59;142;338;18 (64.3%);64.3;9 (32.1%);32.1;-196;1988.0
+IA: Ensemble_Boosting_Gradient (Walk-Forward);Machine Learning (Rolling WF);Retreinamento Semanal;Bimestre Completo (N=28);28;14.07;18.68;-0.019;7.05;247;147;13 (46.4%);46.4;15 (53.6%);53.6;100;3458.0
+Modelo Híbrido 50/50;Híbrido IA+Humano;;Bimestre Completo (N=28);28;14.46;19.37;-0.096;7.25;157;248;16 (57.1%);57.1;10 (35.7%);35.7;-91;2198.0
+Modelo Híbrido +12 ref (Conformal P85);Híbrido com Margem;;Bimestre Completo (N=28);28;16.68;21.0;-0.288;8.36;356;111;6 (21.4%);21.4;21 (75.0%);75.0;245;4984.0

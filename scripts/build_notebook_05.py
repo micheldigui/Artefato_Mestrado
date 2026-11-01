@@ -188,3 +188,4 @@ Path('notebooks/05_modelo_hibrido_e_margens_seguranca.ipynb').parent.mkdir(paren
 with open('notebooks/05_modelo_hibrido_e_margens_seguranca.ipynb', 'w', encoding='utf-8') as f:
     json.dump(nb, f, indent=1, ensure_ascii=False)
 print('Notebook 05 gerado com sucesso!')
+
