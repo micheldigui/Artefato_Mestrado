@@ -49,8 +49,18 @@ def carregar_fato_diaria_completa():
         if "status_legal" in df_fato.columns and "is_dia_letivo" not in df_fato.columns:
             df_fato["is_dia_letivo"] = df_fato["status_legal"].astype(str).str.lower().str.contains("letivo|aula")
             
-        if "dia_nome" in df_fato.columns and "dia_da_semana" not in df_fato.columns:
-            df_fato["dia_da_semana"] = df_fato["dia_nome"].astype(str).str.lower()
+        mapa_dias_nomes = {
+            "seg": "segunda-feira", "ter": "terça-feira", "qua": "quarta-feira",
+            "qui": "quinta-feira", "sex": "sexta-feira", "sab": "sábado", "dom": "domingo",
+            0: "segunda-feira", 1: "terça-feira", 2: "quarta-feira",
+            3: "quinta-feira", 4: "sexta-feira", 5: "sábado", 6: "domingo"
+        }
+        if "data_dt" in df_fato.columns:
+            df_fato["dia_da_semana"] = df_fato["data_dt"].dt.dayofweek.map(mapa_dias_nomes)
+        elif "dia_nome" in df_fato.columns:
+            df_fato["dia_da_semana"] = df_fato["dia_nome"].astype(str).str.lower().map(mapa_dias_nomes).fillna(df_fato["dia_nome"])
+        else:
+            df_fato["dia_da_semana"] = "segunda-feira"
             
         if "prato" in df_fato.columns and "prato_principal" not in df_fato.columns:
             df_fato["prato_principal"] = df_fato["prato"]

@@ -1025,25 +1025,25 @@ def renderizar_painel_explicativo(objetivo_rotina, como_foi_feito_ciencia, como_
 # PÁGINA 1: DASHBOARD (SEÇÕES DINÂMICAS E FILTROS INTERATIVOS)
 # ==============================================================================
 if pagina_ativa == "Dashboard":
-    st.markdown('<div class="story-badge">ETAPA 1 DE 6 • DIAGNÓSTICO HISTÓRICO</div>', unsafe_allow_html=True)
-    st.markdown("### Visão Geral e Indicadores Históricos")
-    st.markdown('<p class="story-subtitle">Compreenda a história do refeitório: os descompassos dos regimes anteriores (2023–2026) e as evidências reais que regem a frequência discente.</p>', unsafe_allow_html=True)
+    st.markdown('<div class="story-badge">ETAPA 1 DE 6 • DIAGNÓSTICO HISTÓRICO & EDA COMPLETA</div>', unsafe_allow_html=True)
+    st.markdown("### Visão Geral, Indicadores e Análise Exploratória (EDA)")
+    st.markdown('<p class="story-subtitle">Explore de forma 100% interativa todas as evidências que regem a frequência discente: consumo histórico, calendário letivo, cardápio, variáveis climáticas e o ranking de poder preditivo.</p>', unsafe_allow_html=True)
     
     renderizar_painel_explicativo(
         objetivo_rotina=(
-            "**Visualizar o comportamento real dos alunos no refeitório.** "
+            "**Visualizar o comportamento real dos alunos no refeitório e embasar decisões com dados.** "
             "Aqui você descobre exatamente o que faz a quantidade de comida necessária subir ou descer, "
             "comparando o que foi servido contra as reservas dos alunos e as previsões da equipe."
         ),
         como_foi_feito_ciencia=(
-            "**Estudo de mais de 600 dias letivos reais auditados na instituição.** "
+            "**Estudo de mais de 650 dias letivos reais auditados na instituição (2023 a 2026).** "
             "A pesquisa comprovou que a presença discente não é mero acaso: ela responde à proteína servida, "
-            "ao dia da semana e às chuvas intensas (que alagam vias e dificultam o transporte escolar)."
+            "ao dia da semana, à proximidade do fim do semestre e às tempestades severas."
         ),
         como_usar_passos=(
-            "1. **Use os filtros de ano e dia da semana** para recortar o período desejado.\n"
-            "2. **Navegue pelas 4 seções temáticas** abaixo para embasar pedidos de compras ou reuniões de cardápio.\n"
-            "3. **Passe o mouse sobre os gráficos** para inspecionar os números exatos de cada data."
+            "1. **Use os filtros interativos** para recortar anos ou dias da semana desejados.\n"
+            "2. **Selecione uma das 5 seções temáticas** abaixo para navegar pelos gráficos interativos.\n"
+            "3. **Passe o mouse ou toque nos gráficos** para inspecionar os números exatos e detalhes de cada ponto."
         )
     )
     
@@ -1058,7 +1058,7 @@ if pagina_ativa == "Dashboard":
     
     # Linha de Filtros Interativos Globais do Dashboard
     with st.container(border=True):
-        st.markdown("##### Filtros Interativos do Histórico")
+        st.markdown("##### 🎛️ Filtros Interativos do Histórico")
         col_f1, col_f2 = st.columns([1.5, 2.5])
         with col_f1:
             filtro_ano = st.selectbox(
@@ -1081,7 +1081,7 @@ if pagina_ativa == "Dashboard":
             help="Desconsidera registros pontuais com consumo inferior a 30 refeições (como semanas de exames finais, conselhos e testes de sistema), revelando a menor presença em dias de operação escolar regular."
         )
             
-    # Aplicação dos filtros dinâmicos
+    # Aplicação dos filtros dinâmicos com normalização robusta
     df_dash = df_validos_geral.copy()
     if filtro_ano == "2026 (Ano Corrente)":
         df_dash = df_dash[df_dash["ano"] == 2026]
@@ -1092,8 +1092,17 @@ if pagina_ativa == "Dashboard":
     elif filtro_ano == "2023":
         df_dash = df_dash[df_dash["ano"] == 2023]
         
+    def normalizar_dia_chave(d):
+        txt = str(d).lower().strip()
+        for k in ["seg", "ter", "qua", "qui", "sex", "sab", "dom"]:
+            if k in txt:
+                return k
+        return txt
+
     if filtro_dias_sem:
-        df_dash = df_dash[df_dash["dia_da_semana"].isin(filtro_dias_sem)]
+        chaves_sel = [normalizar_dia_chave(d) for d in filtro_dias_sem]
+        df_dash["_dia_k"] = df_dash["dia_da_semana"].apply(normalizar_dia_chave)
+        df_dash = df_dash[df_dash["_dia_k"].isin(chaves_sel)]
     else:
         df_dash = df_dash.iloc[0:0]
 
@@ -1101,7 +1110,7 @@ if pagina_ativa == "Dashboard":
         df_dash = df_dash[df_dash["consumo"] >= 30]
         
     if df_dash.empty:
-        st.warning("**Nenhum registro encontrado para este filtro.** Selecione ao menos um dia da semana para visualizar os gráficos e indicadores.")
+        st.warning("⚠️ **Nenhum registro encontrado para este filtro.** Selecione ao menos um dia da semana para visualizar os gráficos e indicadores.")
         st.stop()
 
     # KPIs Dinâmicos com base nos filtros
@@ -1123,35 +1132,40 @@ if pagina_ativa == "Dashboard":
     )
     st.markdown(kpi_html, unsafe_allow_html=True)
     
-    # Seletor das 4 Seções Analíticas do Dashboard
-    st.markdown("#####  Escolha a Seção Temática que Deseja Explorar:")
-    secao_dash = st.radio(
-        "Seção:",
-        [
-            " 1. Regimes de Gestão vs Consumo Real",
-            "2. Clima & Efeito das Chuvas",
-            "3. Cardápio & Atratividade",
-            "4. Calendário & Sazonalidade Escolar"
-        ],
-        horizontal=True,
-        label_visibility="collapsed"
-    )
+    # Seletor Moderno das 5 Seções Analíticas do Dashboard
+    st.markdown("##### 🧭 Escolha a Seção Temática que Deseja Explorar:")
+    opcoes_secoes = [
+        "📊 1. Consumo Histórico & Regimes",
+        "📅 2. Calendário & Sazonalidade",
+        "🍲 3. Cardápio & Atratividade",
+        "🌦️ 4. Clima & Efeito Meteorológico",
+        "🌪️ 5. Poder Preditivo dos Atributos (EDA)"
+    ]
+    if hasattr(st, "pills"):
+        secao_dash = st.pills("Seção Temática:", opcoes_secoes, default=opcoes_secoes[0], label_visibility="collapsed")
+    elif hasattr(st, "segmented_control"):
+        secao_dash = st.segmented_control("Seção Temática:", opcoes_secoes, default=opcoes_secoes[0], label_visibility="collapsed")
+    else:
+        secao_dash = st.radio("Seção Temática:", opcoes_secoes, horizontal=True, label_visibility="collapsed")
     
+    if not secao_dash:
+        secao_dash = opcoes_secoes[0]
+        
     st.write("")
     
     # --------------------------------------------------------------------------
     # SUBSEÇÃO 1: REGIMES DE GESTÃO VS CONSUMO REAL
     # --------------------------------------------------------------------------
-    if "1. Regimes" in secao_dash:
+    if "1. Consumo Histórico" in secao_dash:
         with st.container(border=True):
-            st.markdown("####  Regimes Históricos de Gestão vs. Consumo Real dos Alunos")
+            st.markdown("#### ⚖️ Regimes Históricos de Gestão vs. Consumo Real dos Alunos")
             st.write(
                 "**Entenda a história do nosso refeitório:** "
                 "Entre 2023 e 2025, a quantidade de comida dependia do preenchimento voluntário de reservas feitas pelos discentes no sistema acadêmico. "
-                "Muitos esqueciam de registrar: em **63,8% dos dias faltavam refeições previstas**, gerando risco de estudantes ficarem sem almoço. "
-                "Já em 2026, para proteger os estudantes, a nutrição passou a estipular um quantitativo fixo com folga preventiva, "
-                "o que evitou o desabastecimento, mas acabou gerando sobreoferta (+1.898 refeições excedentes em 123 datas). "
-                "O artefato preditivo une os dois mundos para equilibrar a balança."
+                "Muitos esqueciam de registrar: em **65,6% dos dias faltavam refeições previstas no agendamento**, gerando risco de estudantes ficarem sem almoço. "
+                "Já em 2026, a nutrição passou a estipular um quantitativo técnico com folga preventiva, "
+                "o que reduziu a taxa de falta para 39,6%, mas gerou sobras de segurança em dias de baixa presença. "
+                "O artefato preditivo une os dois mundos para equilibrar perfeitamente a balança."
             )
             
             df_reg = df_dash.copy()
@@ -1181,7 +1195,7 @@ if pagina_ativa == "Dashboard":
                             domain=["Sobra / Excedente (+)", "Falta Potencial (-)"],
                             range=["#f59e0b", "#ef4444"]
                         ),
-                        legend=alt.Legend(title="Balanço Diário", labelFont="Inter", titleFont="Inter")
+                        legend=alt.Legend(title="Balanço Diário", orient="top")
                     ),
                     tooltip=[
                         alt.Tooltip("data:N", title="Data"),
@@ -1189,12 +1203,7 @@ if pagina_ativa == "Dashboard":
                         alt.Tooltip("referencia_planejada:Q", title="Previsto / Reservado"),
                         alt.Tooltip("desvio:Q", title="Diferença (ref)")
                     ]
-                ).properties(height=280).configure_axis(
-                    labelColor=chart_text, titleColor=chart_text, gridColor=chart_grid,
-                    labelFont="Inter", titleFont="Inter"
-                ).configure_legend(
-                    labelColor=chart_text, titleColor=chart_text
-                ).configure_view(stroke=None, fill="transparent")
+                ).properties(height=280).interactive()
                 st.altair_chart(chart_desv, use_container_width=True)
                 
             with col_r2:
@@ -1227,17 +1236,14 @@ if pagina_ativa == "Dashboard":
                         alt.Tooltip("desvio:Q", title="Saldo (ref)")
                     ]
                 )
-                chart_timeline = (chart_real + chart_plan + chart_pts).properties(height=280).configure_axis(
-                    labelColor=chart_text, titleColor=chart_text, gridColor=chart_grid,
-                    labelFont="Inter", titleFont="Inter"
-                ).configure_view(stroke=None, fill="transparent")
+                chart_timeline = (chart_real + chart_plan + chart_pts).properties(height=280).interactive()
                 st.altair_chart(chart_timeline, use_container_width=True)
 
-            # Linha 2 de Análises: Balanço Anual de Falta vs Sobra (Dissertação Fig. 05) e Confronto dos Regimes
+            # Linha 2 de Análises: Balanço Anual de Falta vs Sobra e Dispersão Interativa 45°
             col_r3, col_r4 = st.columns(2)
             with col_r3:
                 st.markdown("##### Potencial de Falta (Déficit) vs. Sobra por Ano")
-                st.caption("Comparativo anual consolidado de refeições faltantes vs. excedentes acumuladas (Dissertação Fig. 05).")
+                st.caption("Comparativo anual consolidado de refeições faltantes vs. excedentes acumuladas (Dissertação Fig. 02).")
                 
                 df_bal_base = df_validos_geral.copy()
                 c_nut = df_bal_base["planejado_nutri"] if "planejado_nutri" in df_bal_base.columns else pd.Series(index=df_bal_base.index, dtype=float)
@@ -1248,226 +1254,186 @@ if pagina_ativa == "Dashboard":
                 df_bal_base["falta_ref"] = (df_bal_base["consumo"] - df_bal_base["referencia_bal"]).clip(lower=0)
                 df_bal_base["sobra_ref"] = (df_bal_base["referencia_bal"] - df_bal_base["consumo"]).clip(lower=0)
                 
-                resumo_bal = df_bal_base.groupby("ano").agg(
-                    total_falta=("falta_ref", "sum"),
-                    total_sobra=("sobra_ref", "sum")
-                ).reset_index()
+                df_bal_ano = df_bal_base.groupby("ano")[["sobra_ref", "falta_ref"]].sum().reset_index()
+                df_bal_melt = df_bal_ano.melt(id_vars="ano", value_vars=["sobra_ref", "falta_ref"], var_name="tipo", value_name="volume")
+                df_bal_melt["tipo_label"] = df_bal_melt["tipo"].map({"sobra_ref": "Sobras Potenciais (Excedente)", "falta_ref": "Déficit Potencial (Falta no Agendamento)"})
+                df_bal_melt["ano_str"] = df_bal_melt["ano"].astype(str)
                 
-                df_melt_bal = resumo_bal.melt(
-                    id_vars=["ano"],
-                    value_vars=["total_falta", "total_sobra"],
-                    var_name="tipo",
-                    value_name="total_refeicoes"
-                )
-                df_melt_bal["ano_str"] = df_melt_bal["ano"].astype(str)
-                df_melt_bal["tipo_nome"] = df_melt_bal["tipo"].map({
-                    "total_falta": "Potencial de Falta (Déficit)",
-                    "total_sobra": "Potencial de Sobra (Excedente)"
-                })
-                
-                chart_bal_ano = alt.Chart(df_melt_bal).mark_bar(cornerRadiusTopLeft=4, cornerRadiusTopRight=4).encode(
+                chart_bal = alt.Chart(df_bal_melt).mark_bar(cornerRadiusTopLeft=4, cornerRadiusTopRight=4).encode(
                     x=alt.X("ano_str:N", title="Ano Letivo", axis=alt.Axis(labelAngle=0)),
-                    xOffset="tipo_nome:N",
-                    y=alt.Y("total_refeicoes:Q", title="Total de Refeições no Ano"),
-                    color=alt.Color(
-                        "tipo_nome:N",
-                        scale=alt.Scale(
-                            domain=["Potencial de Falta (Déficit)", "Potencial de Sobra (Excedente)"],
-                            range=["#ef4444", "#f59e0b"]
-                        ),
-                        legend=alt.Legend(title=None, orient="top", labelFont="Inter")
-                    ),
+                    y=alt.Y("volume:Q", title="Volume de Refeições Acumuladas"),
+                    color=alt.Color("tipo_label:N", scale=alt.Scale(domain=["Sobras Potenciais (Excedente)", "Déficit Potencial (Falta no Agendamento)"], range=["#f59e0b", "#ef4444"]), legend=alt.Legend(title=None, orient="top")),
+                    xOffset="tipo_label:N",
                     tooltip=[
-                        alt.Tooltip("ano_str:N", title="Ano Letivo"),
-                        alt.Tooltip("tipo_nome:N", title="Tipo"),
-                        alt.Tooltip("total_refeicoes:Q", title="Total (ref)", format=",.0f")
+                        alt.Tooltip("ano_str:N", title="Ano"),
+                        alt.Tooltip("tipo_label:N", title="Tipo de Saldo"),
+                        alt.Tooltip("volume:Q", title="Total de Refeições", format=",.0f")
                     ]
-                ).properties(height=260).configure_axis(
-                    labelColor=chart_text, titleColor=chart_text, gridColor=chart_grid,
-                    labelFont="Inter", titleFont="Inter"
-                ).configure_legend(
-                    labelColor=chart_text, titleColor=chart_text
-                ).configure_view(stroke=None, fill="transparent")
-                st.altair_chart(chart_bal_ano, use_container_width=True)
-                st.caption("**Diagnóstico:** Em 2024 e 2025, o sistema voluntário gerou mais de 8.200 refeições em déficit (risco de desabastecimento). Em 2026, a folga preventiva zerou as faltas, mas acumulou +3.354 refeições excedentes.")
-
+                ).properties(height=280).interactive()
+                st.altair_chart(chart_bal, use_container_width=True)
+                
             with col_r4:
-                st.markdown("#####  Confronto dos 3 Regimes Operacionais da Pesquisa")
-                st.caption("Comparação direta e auditada das 3 fases metodológicas da instituição.")
+                st.markdown("##### Dispersão: Consumo Real vs. Referência Planejada")
+                st.caption("Pontos próximos da linha diagonal de 45° indicam alta precisão; dispersão indica erro.")
                 
-                resumo_regimes = pd.DataFrame([
-                    {
-                        "Regime Operacional": "Reserva Feita pelos Discentes (2023–2025)",
-                        "Média Prevista": "128 refeições",
-                        "Média Consumida": "155 refeições",
-                        "Saldo Médio": "-27 ref (Falta)",
-                        "Risco de Falta": "63,8% dos dias",
-                        "Diagnóstico Prático": "Alta subnotificação voluntária; risco crítico de desabastecimento."
-                    },
-                    {
-                        "Regime Operacional": "Censo Preventivo da Nutrição (2026)",
-                        "Média Prevista": "180 refeições",
-                        "Média Consumida": "154 refeições",
-                        "Saldo Médio": "+26 ref (Sobra)",
-                        "Risco de Falta": "0% dos dias",
-                        "Diagnóstico Prático": "Garantia de segurança alimentar, mas com sobreoferta (+1.898 refeições excedentes em 123 datas)."
-                    },
-                    {
-                        "Regime Operacional": " Artefato Preditivo Recomendado (IA + Margem)",
-                        "Média Prevista": "172 refeições",
-                        "Média Consumida": "154 refeições",
-                        "Saldo Médio": "+18 ref (Protegido)",
-                        "Risco de Falta": "15,1% residual",
-                        "Diagnóstico Prático": "84,9% de proteção real contra desabastecimento com mínimo desperdício financeiro."
-                    }
-                ])
-                st.dataframe(resumo_regimes, use_container_width=True, hide_index=True)
-                st.caption("**Conclusão:** O artefato atua como o mediador ideal, trazendo segurança alimentar sem desperdício de dinheiro público.")
-
-    # --------------------------------------------------------------------------
-    # SUBSEÇÃO 2: CLIMA & EFEITO DAS CHUVAS
-    # --------------------------------------------------------------------------
-    elif "2. Clima" in secao_dash:
-        with st.container(border=True):
-            st.markdown("#### Como a Chuva e o Clima Mudam a Presença dos Alunos?")
-            st.write(
-                "**A realidade do transporte escolar:** "
-                "Em dias de chuva forte e tempestades, muitos alunos enfrentam vias alagadas, atrasos nos ônibus ou optam por voltar para casa mais cedo. "
-                "O artefato consulta a meteorologia de satélite e ajusta a ordem de preparo automaticamente para que a cozinha não prepare comida a mais."
-            )
-            
-            df_ch = df_dash.copy()
-            df_ch["faixa_chuva"] = pd.cut(
-                df_ch["precipitation_sum"],
-                bins=[-1, 0.5, 5.0, 100.0],
-                labels=["Dia Seco (0 mm)", "Garoa / Chuva Leve (0.5 a 5 mm)", "Chuva Forte / Tempestade (>5 mm)"]
-            )
-            df_ch_agg = df_ch.groupby("faixa_chuva", observed=False)["consumo"].agg(["count", "mean"]).reset_index()
-            df_ch_agg["consumo_medio"] = df_ch_agg["mean"].round(1)
-            
-            # Linha 1: Média por Faixa de Chuva e Dispersão mm vs Consumo
-            col_c1, col_c2 = st.columns(2)
-            with col_c1:
-                st.markdown("##### Consumo Médio por Intensidade de Chuva")
-                st.caption("Note a queda acentuada de alunos nos dias de chuva forte.")
+                df_disp = df_dash.copy()
+                c_n = df_disp["planejado_nutri"] if "planejado_nutri" in df_disp.columns else pd.Series(index=df_disp.index, dtype=float)
+                c_r = df_disp["reservas"] if "reservas" in df_disp.columns else pd.Series(index=df_disp.index, dtype=float)
+                df_disp["planejado"] = c_n.combine_first(c_r)
+                df_disp = df_disp.dropna(subset=["planejado", "consumo"]).copy()
+                df_disp["regime_nome"] = df_disp["ano"].apply(lambda a: "Nutricionista (2026)" if a == 2026 else "Reservas Alunos (2023-2025)")
                 
-                chart_ch_bar = alt.Chart(df_ch_agg).mark_bar(cornerRadiusTopLeft=6, cornerRadiusTopRight=6, color=chart_accent).encode(
-                    x=alt.X("faixa_chuva:N", title=None, axis=alt.Axis(labelAngle=0)),
-                    y=alt.Y("consumo_medio:Q", title="Média de Refeições Servidas"),
-                    tooltip=[
-                        alt.Tooltip("faixa_chuva:N", title="Condição Climática"),
-                        alt.Tooltip("consumo_medio:Q", title="Média de Refeições"),
-                        alt.Tooltip("count:Q", title="Total de Dias no Histórico")
-                    ]
-                ).properties(height=260).configure_axis(
-                    labelColor=chart_text, titleColor=chart_text, gridColor=chart_grid,
-                    labelFont="Inter", titleFont="Inter"
-                ).configure_view(stroke=None, fill="transparent")
-                st.altair_chart(chart_ch_bar, use_container_width=True)
-                
-            with col_c2:
-                st.markdown("#####  Relação Chuva (mm) vs. Refeições Servidas")
-                st.caption("Cada ponto representa um dia letivo real; a linha mostra a tendência de queda.")
-                
-                chart_ch_scatter = alt.Chart(df_ch).mark_circle(size=45, opacity=0.6, color=chart_accent).encode(
-                    x=alt.X("precipitation_sum:Q", title="Volume de Chuva (mm)"),
-                    y=alt.Y("consumo:Q", title="Refeições Servidas"),
+                scatter_pts = alt.Chart(df_disp).mark_circle(size=45, opacity=0.6).encode(
+                    x=alt.X("planejado:Q", title="Quantitativo Planejado / Reservado (ref)"),
+                    y=alt.Y("consumo:Q", title="Consumo Real na Catraca (ref)"),
+                    color=alt.Color("regime_nome:N", scale=alt.Scale(domain=["Nutricionista (2026)", "Reservas Alunos (2023-2025)"], range=["#008744", "#0284c7"]), legend=alt.Legend(title="Regime", orient="top")),
                     tooltip=[
                         alt.Tooltip("data:N", title="Data"),
-                        alt.Tooltip("precipitation_sum:Q", title="Chuva (mm)"),
-                        alt.Tooltip("consumo:Q", title="Consumo Real"),
-                        alt.Tooltip("prato_principal:N", title="Prato")
+                        alt.Tooltip("planejado:Q", title="Planejado"),
+                        alt.Tooltip("consumo:Q", title="Real"),
+                        alt.Tooltip("regime_nome:N", title="Regime")
                     ]
                 )
-                line_trend = chart_ch_scatter.transform_regression("precipitation_sum", "consumo").mark_line(color="#ef4444", strokeWidth=2.5)
                 
-                chart_ch_final = (chart_ch_scatter + line_trend).properties(height=260).configure_axis(
-                    labelColor=chart_text, titleColor=chart_text, gridColor=chart_grid,
-                    labelFont="Inter", titleFont="Inter"
-                ).configure_view(stroke=None, fill="transparent")
-                st.altair_chart(chart_ch_final, use_container_width=True)
+                # Linha de 45 graus (identidade)
+                max_v = max(df_disp["planejado"].max(), df_disp["consumo"].max()) if len(df_disp) > 0 else 300
+                df_diag = pd.DataFrame({"x": [0, max_v], "y": [0, max_v]})
+                diag_line = alt.Chart(df_diag).mark_line(color="#94a3b8", strokeDash=[4, 4]).encode(x="x:Q", y="y:Q")
+                
+                st.altair_chart((scatter_pts + diag_line).properties(height=280).interactive(), use_container_width=True)
 
-            # Linha 2: Temperatura Máxima e Matriz Operacional Meteorológica
-            col_c3, col_c4 = st.columns(2)
-            with col_c3:
-                st.markdown("##### Frequência Discente por Faixa de Temperatura")
-                st.caption("Adesão de estudantes conforme a temperatura máxima registrada (Dissertação Fig. 22).")
+            # Expander com Figuras Acadêmicas Oficiais da Dissertação
+            with st.expander("🖼️ Ver Figuras Acadêmicas da Dissertação (Figuras 01 e 02)", expanded=False):
+                col_f_a, col_f_b = st.columns(2)
+                with col_f_a:
+                    p1 = os.path.join(ROOT_DIR, "resultados", "figuras", "eda", "figura_01_confronto_metodos_humanos.png")
+                    if os.path.exists(p1):
+                        st.image(p1, caption="Figura 01: Confronto dos Métodos Humanos (Reservas Discentes vs. Nutricionista)", use_container_width=True)
+                with col_f_b:
+                    p2 = os.path.join(ROOT_DIR, "resultados", "figuras", "eda", "figura_02_balanco_sobras_faltas.png")
+                    if os.path.exists(p2):
+                        st.image(p2, caption="Figura 02: Balanço Acumulado de Sobras vs Faltas Potenciais", use_container_width=True)
+
+    # --------------------------------------------------------------------------
+    # SUBSEÇÃO 2: CALENDÁRIO & SAZONALIDADE ESCOLAR
+    # --------------------------------------------------------------------------
+    elif "2. Calendário" in secao_dash:
+        with st.container(border=True):
+            st.markdown("#### 📅 O Ritmo Semanal, Mensal e Desmobilização de Fim de Semestre")
+            st.write(
+                "**A dinâmica temporal das aulas:** "
+                "A presença discente não é uniforme: a segunda-feira começa com alta frequência, "
+                "a quarta-feira atinge o pico com disciplinas técnicas de laboratório integradas e a sexta-feira à tarde sofre uma evasão natural de cerca de 20%. "
+                "Além disso, a pesquisa descobriu que **nos últimos 3 dias úteis do semestre, o consumo desaba 56,1%** devido ao encerramento antecipado de avaliações."
+            )
+            
+            dias_ordem = ["segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira"]
+            dias_map = {"segunda-feira": "Segunda", "terça-feira": "Terça", "quarta-feira": "Quarta", "quinta-feira": "Quinta", "sexta-feira": "Sexta"}
+            meses_map = {1: "Jan", 2: "Fev", 3: "Mar", 4: "Abr", 5: "Mai", 6: "Jun", 7: "Jul", 8: "Ago", 9: "Set", 10: "Out", 11: "Nov", 12: "Dez"}
+            
+            df_d = df_dash[df_dash["dia_da_semana"].isin(dias_ordem)].groupby("dia_da_semana")["consumo"].agg(["count", "mean"]).reset_index()
+            df_d["dia_nome"] = df_d["dia_da_semana"].map(dias_map)
+            df_d["consumo_medio"] = df_d["mean"].round(1)
+            
+            # Linha 1: Média por Dia da Semana e Sazonalidade Mensal
+            col_d1, col_d2 = st.columns(2)
+            with col_d1:
+                st.markdown("##### Média de Presença por Dia da Semana")
+                st.caption("Comportamento médio da frequência dos estudantes de segunda a sexta-feira.")
                 
-                df_ch["faixa_temp"] = pd.cut(
-                    df_ch["temperature_2m_max"],
-                    bins=[-10, 20, 25, 30, 50],
-                    labels=["Frio (<20°C)", "Agradável (20 a 25°C)", "Calor Moderado (25 a 30°C)", "Calor Intenso (>30°C)"]
-                )
-                df_t_agg = df_ch.groupby("faixa_temp", observed=False)["consumo"].agg(["count", "mean"]).reset_index()
-                df_t_agg["consumo_medio"] = df_t_agg["mean"].round(1)
-                
-                chart_temp_bar = alt.Chart(df_t_agg).mark_bar(cornerRadiusTopLeft=6, cornerRadiusTopRight=6, color="#f59e0b").encode(
-                    x=alt.X("faixa_temp:N", title=None, axis=alt.Axis(labelAngle=0)),
-                    y=alt.Y("consumo_medio:Q", title="Média de Refeições"),
+                chart_d_bar = alt.Chart(df_d).mark_bar(cornerRadiusTopLeft=6, cornerRadiusTopRight=6, color="#008744").encode(
+                    x=alt.X("dia_nome:N", sort=["Segunda", "Terça", "Quarta", "Quinta", "Sexta"], title=None, axis=alt.Axis(labelAngle=0)),
+                    y=alt.Y("consumo_medio:Q", title="Média de Refeições Servidas"),
                     tooltip=[
-                        alt.Tooltip("faixa_temp:N", title="Faixa Térmica"),
-                        alt.Tooltip("consumo_medio:Q", title="Média de Refeições"),
+                        alt.Tooltip("dia_nome:N", title="Dia da Semana"),
+                        alt.Tooltip("consumo_medio:Q", title="Média (refeições)"),
                         alt.Tooltip("count:Q", title="Total de Dias")
                     ]
-                ).properties(height=260).configure_axis(
-                    labelColor=chart_text, titleColor=chart_text, gridColor=chart_grid,
-                    labelFont="Inter", titleFont="Inter"
-                ).configure_view(stroke=None, fill="transparent")
-                st.altair_chart(chart_temp_bar, use_container_width=True)
+                ).properties(height=260).interactive()
+                st.altair_chart(chart_d_bar, use_container_width=True)
                 
-            with col_c4:
-                st.markdown("##### Matriz de Diagnóstico Meteorológico & Ação")
-                st.caption("Regras de calibração automática aplicadas pelo artefato para proteger a produção.")
+            with col_d2:
+                st.markdown("##### Sazonalidade ao Longo dos Meses do Ano Letivo")
+                st.caption("Picos no meio dos semestres (março/agosto) e quedas típicas em inícios de ano letivo e períodos de recesso.")
                 
-                d_sec = (df_ch["precipitation_sum"] == 0).sum()
-                m_sec = df_ch[df_ch["precipitation_sum"] == 0]["consumo"].mean()
-                d_gar = ((df_ch["precipitation_sum"] > 0) & (df_ch["precipitation_sum"] <= 5)).sum()
-                m_gar = df_ch[(df_ch["precipitation_sum"] > 0) & (df_ch["precipitation_sum"] <= 5)]["consumo"].mean()
-                d_chu = ((df_ch["precipitation_sum"] > 5) & (df_ch["precipitation_sum"] <= 15)).sum()
-                m_chu = df_ch[(df_ch["precipitation_sum"] > 5) & (df_ch["precipitation_sum"] <= 15)]["consumo"].mean()
-                d_tem = (df_ch["precipitation_sum"] > 15).sum()
-                m_tem = df_ch[df_ch["precipitation_sum"] > 15]["consumo"].mean()
+                df_dash_mes = df_dash.copy()
+                df_dash_mes["mes_nome"] = df_dash_mes["mes"].map(meses_map)
+                df_m = df_dash_mes.groupby(["mes", "mes_nome"])["consumo"].mean().reset_index().sort_values("mes")
+                df_m["consumo_medio"] = df_m["consumo"].round(1)
                 
-                df_matriz_clima = pd.DataFrame([
-                    {
-                        "Condição Climática": "Dia Seco (0 mm)",
-                        "Datas no Filtro": f"{d_sec} dias",
-                        "Média Real": f"{m_sec:.0f} ref" if pd.notna(m_sec) else "-",
-                        "Comportamento": "Frequência plena e rotina normal.",
-                        "Regra do Artefato": "Margem protetiva plena (+12 a +18 ref)."
-                    },
-                    {
-                        "Condição Climática": "Garoa / Chuva Leve (0.1 a 5 mm)",
-                        "Datas no Filtro": f"{d_gar} dias",
-                        "Média Real": f"{m_gar:.0f} ref" if pd.notna(m_gar) else "-",
-                        "Comportamento": "Atrasos pontuais no transporte.",
-                        "Regra do Artefato": "Pequeno recuo automático (-5 refeições)."
-                    },
-                    {
-                        "Condição Climática": "Chuva Forte (5.1 a 15 mm)",
-                        "Datas no Filtro": f"{d_chu} dias",
-                        "Média Real": f"{m_chu:.0f} ref" if pd.notna(m_chu) else "-",
-                        "Comportamento": "Dificuldades de deslocamento.",
-                        "Regra do Artefato": "Recuo preventivo (-12 a -18 refeições)."
-                    },
-                    {
-                        "Condição Climática": "Tempestade / Alagamentos (>15 mm)",
-                        "Datas no Filtro": f"{d_tem} dias",
-                        "Média Real": f"{m_tem:.0f} ref" if pd.notna(m_tem) else "-",
-                        "Comportamento": "Evasão de alunos de transporte escolar.",
-                        "Regra do Artefato": "Zera margem extra e aplica corte preventivo."
-                    }
-                ])
-                st.dataframe(df_matriz_clima, use_container_width=True, hide_index=True)
+                chart_m_bar = alt.Chart(df_m).mark_bar(cornerRadiusTopLeft=6, cornerRadiusTopRight=6, color="#0284c7").encode(
+                    x=alt.X("mes_nome:N", sort=list(meses_map.values()), title=None, axis=alt.Axis(labelAngle=0)),
+                    y=alt.Y("consumo_medio:Q", title="Média de Refeições"),
+                    tooltip=[
+                        alt.Tooltip("mes_nome:N", title="Mês"),
+                        alt.Tooltip("consumo_medio:Q", title="Média (ref)")
+                    ]
+                ).properties(height=260).interactive()
+                st.altair_chart(chart_m_bar, use_container_width=True)
+
+            # Linha 2: Desmobilização de Fim de Semestre e Curva Semanal por Ano
+            col_d3, col_d4 = st.columns(2)
+            with col_d3:
+                st.markdown("##### Desmobilização Acadêmica no Fim do Semestre")
+                st.caption("Queda expressiva de consumo nos últimos 15 dias letivos antes das férias (Dissertação Fig. 05).")
                 
-            st.caption("**Regra de Ouro do Artefato:** Em dias com chuva prevista acima de 10 mm, a margem de segurança extra é automaticamente zerada para evitar panelas cheias no lixo.")
+                df_fim = df_validos_geral.dropna(subset=["dias_ate_fim_bloco"]).copy()
+                df_fim = df_fim[df_fim["dias_ate_fim_bloco"] <= 20]
+                df_fim_agg = df_fim.groupby("dias_ate_fim_bloco")["consumo"].agg(["mean", "count"]).reset_index()
+                df_fim_agg["dias_restantes"] = df_fim_agg["dias_ate_fim_bloco"].astype(int)
+                
+                chart_fim = alt.Chart(df_fim_agg).mark_line(point=True, color="#dc2626", strokeWidth=2.5).encode(
+                    x=alt.X("dias_restantes:Q", sort="descending", title="Dias Restantes até o Término das Aulas"),
+                    y=alt.Y("mean:Q", title="Consumo Médio de Refeições"),
+                    tooltip=[
+                        alt.Tooltip("dias_restantes:Q", title="Dias até o Fim"),
+                        alt.Tooltip("mean:Q", title="Consumo Médio (ref)", format=".1f"),
+                        alt.Tooltip("count:Q", title="Amostras no Histórico")
+                    ]
+                ).properties(height=260).interactive()
+                st.altair_chart(chart_fim, use_container_width=True)
+
+            with col_d4:
+                st.markdown("##### Curva Semanal Comparativa por Ano (2023–2026)")
+                st.caption("Comprova que a queda de sexta-feira é estrutural e se repetiu em todos os 4 anos analisados.")
+                
+                df_sem_ano = df_validos_geral[df_validos_geral["dia_da_semana"].isin(dias_ordem)].groupby(["ano", "dia_da_semana"])["consumo"].mean().reset_index()
+                df_sem_ano["dia_nome"] = df_sem_ano["dia_da_semana"].map(dias_map)
+                df_sem_ano["ano_str"] = df_sem_ano["ano"].astype(str)
+                
+                chart_sem_ano = alt.Chart(df_sem_ano).mark_line(point=True, strokeWidth=2.2).encode(
+                    x=alt.X("dia_nome:N", sort=["Segunda", "Terça", "Quarta", "Quinta", "Sexta"], title=None, axis=alt.Axis(labelAngle=0)),
+                    y=alt.Y("consumo:Q", title="Média de Refeições"),
+                    color=alt.Color("ano_str:N", title="Ano", scale=alt.Scale(scheme="category10"), legend=alt.Legend(orient="top")),
+                    tooltip=[
+                        alt.Tooltip("ano_str:N", title="Ano"),
+                        alt.Tooltip("dia_nome:N", title="Dia"),
+                        alt.Tooltip("consumo:Q", title="Média (ref)", format=".0f")
+                    ]
+                ).properties(height=260).interactive()
+                st.altair_chart(chart_sem_ano, use_container_width=True)
+
+            with st.expander("🖼️ Ver Figuras Acadêmicas da Dissertação (Figuras 03, 04 e 05)", expanded=False):
+                col_fa, col_fb, col_fc = st.columns(3)
+                with col_fa:
+                    p3 = os.path.join(ROOT_DIR, "resultados", "figuras", "eda", "figura_03_perfil_semanal_por_ano.png")
+                    if os.path.exists(p3):
+                        st.image(p3, caption="Figura 03: Perfil Semanal Facetado por Ano", use_container_width=True)
+                with col_fb:
+                    p4 = os.path.join(ROOT_DIR, "resultados", "figuras", "eda", "figura_04_sazonalidade_mensal.png")
+                    if os.path.exists(p4):
+                        st.image(p4, caption="Figura 04: Sazonalidade Mensal do Consumo", use_container_width=True)
+                with col_fc:
+                    p5 = os.path.join(ROOT_DIR, "resultados", "figuras", "eda", "figura_05_desmobilizacao_fim_semestre.png")
+                    if os.path.exists(p5):
+                        st.image(p5, caption="Figura 05: Desmobilização no Término do Semestre", use_container_width=True)
 
     # --------------------------------------------------------------------------
     # SUBSEÇÃO 3: CARDÁPIO & ATRATIVIDADE
     # --------------------------------------------------------------------------
     elif "3. Cardápio" in secao_dash:
         with st.container(border=True):
-            st.markdown("#### Qual Prato Atrai Mais Estudantes?")
+            st.markdown("#### 🍲 Qual Prato Atrai Mais Estudantes?")
             st.write(
                 "**A preferência discente no prato principal:** "
                 "O tipo de proteína é uma das variáveis mais fortes no modelo. "
@@ -1485,16 +1451,14 @@ if pagina_ativa == "Dashboard":
             df_p_agg = df_p.groupby("proteina_tipo")["consumo"].agg(["count", "mean", "min", "max"]).reset_index()
             df_p_agg["proteina_nome"] = df_p_agg["proteina_tipo"].map(nomes_proteina)
             df_p_agg["consumo_medio"] = df_p_agg["mean"].round(1)
-            # Ordenação decrescente: o prato com maior média fica sempre no topo (1º lugar)
             df_p_agg = df_p_agg.sort_values(by="consumo_medio", ascending=False).reset_index(drop=True)
             
-            # Linha 1: Média por Tipo de Carne e Tabela Ranking
             col_p1, col_p2 = st.columns([1, 1.3])
             with col_p1:
                 st.markdown("##### Média de Alunos por Tipo de Carne")
                 st.caption(f"Comparativo visual de consumo médio no período: **{filtro_ano}**.")
                 
-                chart_p_bar = alt.Chart(df_p_agg).mark_bar(cornerRadiusTopLeft=6, cornerRadiusTopRight=6, color=chart_primary).encode(
+                chart_p_bar = alt.Chart(df_p_agg).mark_bar(cornerRadiusTopLeft=6, cornerRadiusTopRight=6, color="#008744").encode(
                     x=alt.X("proteina_nome:N", sort="-y", title=None, axis=alt.Axis(labelAngle=0)),
                     y=alt.Y("consumo_medio:Q", title="Média de Refeições Servidas"),
                     tooltip=[
@@ -1502,21 +1466,18 @@ if pagina_ativa == "Dashboard":
                         alt.Tooltip("consumo_medio:Q", title="Média (refeições)"),
                         alt.Tooltip("count:Q", title="Dias Servidos")
                     ]
-                ).properties(height=280).configure_axis(
-                    labelColor=chart_text, titleColor=chart_text, gridColor=chart_grid,
-                    labelFont="Inter", titleFont="Inter"
-                ).configure_view(stroke=None, fill="transparent")
+                ).properties(height=280).interactive()
                 st.altair_chart(chart_p_bar, use_container_width=True)
                 
             with col_p2:
-                st.markdown(f"#####  Ranking e Planejamento por Prato — {filtro_ano}")
+                st.markdown(f"##### Ranking e Recomendações por Prato — {filtro_ano}")
                 st.caption(f"Estatísticas dinâmicas calculadas em tempo real sobre {len(df_p)} datas analisadas no filtro.")
                 
                 html_rows = []
                 rank_meta = [
-                    ("1º Lugar", "rank-1", "Maior Procura"),
-                    ("2º Lugar", "rank-2", "Alta Procura"),
-                    ("3º Lugar", "rank-3", "Procura Média"),
+                    ("1º Lugar", "rank-1", "🏆 Maior Procura"),
+                    ("2º Lugar", "rank-2", "⭐ Alta Procura"),
+                    ("3º Lugar", "rank-3", "⭐ Procura Média"),
                     ("4º Lugar", "rank-other", "⭐⭐ Procura Moderada")
                 ]
                 
@@ -1530,7 +1491,7 @@ if pagina_ativa == "Dashboard":
                     b_txt, b_cls, b_stars = rank_meta[idx] if idx < len(rank_meta) else (f"{idx+1}º Lugar", "rank-other", "⭐ Regular")
                     
                     if idx == 0:
-                        acao = "Maior demanda apurada no recorte. Manter quantitativo pleno e margem protetiva total."
+                        acao = "Maior demanda apurada. Manter quantitativo pleno e margem protetiva total."
                     elif idx == 1:
                         acao = "Padrão de comparecimento consolidado. Manter produção regular estável."
                     elif idx == 2:
@@ -1569,7 +1530,7 @@ if pagina_ativa == "Dashboard":
             col_p3, col_p4 = st.columns(2)
             with col_p3:
                 st.markdown("##### Adesão por Técnica Culinária / Tipo de Preparo")
-                st.caption("Frequência média discente conforme a técnica de cocção (Dissertação Fig. 17).")
+                st.caption("Frequência média discente conforme a técnica de cocção (Dissertação Fig. 07).")
                 
                 preparo_map = {
                     "ao_molho_ou_refogado": "Ao Molho / Refogado",
@@ -1596,10 +1557,7 @@ if pagina_ativa == "Dashboard":
                         alt.Tooltip("consumo_medio:Q", title="Média de Refeições"),
                         alt.Tooltip("count:Q", title="Datas Servidas")
                     ]
-                ).properties(height=260).configure_axis(
-                    labelColor=chart_text, titleColor=chart_text, gridColor=chart_grid,
-                    labelFont="Inter", titleFont="Inter"
-                ).configure_view(stroke=None, fill="transparent")
+                ).properties(height=260).interactive()
                 st.altair_chart(chart_prep_bar, use_container_width=True)
 
             with col_p4:
@@ -1629,129 +1587,227 @@ if pagina_ativa == "Dashboard":
                         })
                 df_tab_var = pd.DataFrame(resumo_var)
                 st.dataframe(df_tab_var, use_container_width=True, hide_index=True)
-                
-            st.caption("**Dica Prática:** Ao agendar peixe na sexta-feira, o efeito é duplo (menos alunos pelo prato e pela evasão da tarde). O sistema compensa isso automaticamente.")
+
+            with st.expander("🖼️ Ver Figuras Acadêmicas da Dissertação (Figuras 06 e 07)", expanded=False):
+                col_f_c1, col_f_c2 = st.columns(2)
+                with col_f_c1:
+                    p6 = os.path.join(ROOT_DIR, "resultados", "figuras", "eda", "figura_06_consumo_por_proteina.png")
+                    if os.path.exists(p6):
+                        st.image(p6, caption="Figura 06: Demanda e Frequência por Tipo de Proteína", use_container_width=True)
+                with col_f_c2:
+                    p7 = os.path.join(ROOT_DIR, "resultados", "figuras", "eda", "figura_07_consumo_por_metodo_preparo.png")
+                    if os.path.exists(p7):
+                        st.image(p7, caption="Figura 07: Consumo Conforme a Técnica Culinária de Preparo", use_container_width=True)
 
     # --------------------------------------------------------------------------
-    # SUBSEÇÃO 4: CALENDÁRIO & SAZONALIDADE ESCOLAR
+    # SUBSEÇÃO 4: CLIMA & EFEITO DAS CHUVAS
     # --------------------------------------------------------------------------
-    elif "4. Calendário" in secao_dash:
+    elif "4. Clima" in secao_dash:
         with st.container(border=True):
-            st.markdown("#### O Ritmo Semanal e Mensal das Aulas")
+            st.markdown("#### 🌦️ Como o Clima Afeta a Presença Discente?")
             st.write(
-                "**A rotina semanal do campus:** "
-                "A frequência não é uniforme ao longo da semana. "
-                "A segunda-feira começa com alta presença discente, a quarta-feira atinge o pico com as disciplinas técnicas integradas e a sexta-feira à tarde sofre uma evasão natural de cerca de 20% dos estudantes."
+                "**Desmistificando a chuva:** "
+                "A pesquisa revelou que garoas e chuvas leves quase não alteram a frequência dos estudantes no refeitório. "
+                "O impacto negativo real ocorre exclusivamente em **chuvas fortes e tempestades (>15 mm)**, "
+                "que provocam inundações em vias e na linha da CPTM, impedindo os alunos de chegarem ao campus."
             )
             
-            dias_ordem = ["segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira"]
-            dias_map = {"segunda-feira": "Segunda", "terça-feira": "Terça", "quarta-feira": "Quarta", "quinta-feira": "Quinta", "sexta-feira": "Sexta"}
-            meses_map = {1: "Jan", 2: "Fev", 3: "Mar", 4: "Abr", 5: "Mai", 6: "Jun", 7: "Jul", 8: "Ago", 9: "Set", 10: "Out", 11: "Nov", 12: "Dez"}
+            df_ch = df_dash.copy()
+            df_ch["faixa_chuva"] = pd.cut(
+                df_ch["precipitation_sum"],
+                bins=[-1, 0.1, 5, 15, 100],
+                labels=["Dia Seco (0 mm)", "Garoa (0.1 a 5 mm)", "Chuva Forte (5.1 a 15 mm)", "Tempestade (>15 mm)"]
+            )
+            df_ch_agg = df_ch.groupby("faixa_chuva", observed=False)["consumo"].agg(["count", "mean"]).reset_index()
+            df_ch_agg["consumo_medio"] = df_ch_agg["mean"].round(1)
             
-            df_d = df_dash[df_dash["dia_da_semana"].isin(dias_ordem)].groupby("dia_da_semana")["consumo"].agg(["count", "mean"]).reset_index()
-            df_d["dia_nome"] = df_d["dia_da_semana"].map(dias_map)
-            df_d["consumo_medio"] = df_d["mean"].round(1)
-            
-            # Linha 1: Média por Dia da Semana e Sazonalidade Mensal
-            col_d1, col_d2 = st.columns(2)
-            with col_d1:
-                st.markdown("#####  Média de Presença por Dia da Semana")
-                st.caption("Comportamento médio da frequência dos estudantes de segunda a sexta-feira.")
+            col_c1, col_c2 = st.columns(2)
+            with col_c1:
+                st.markdown("##### Consumo Médio por Intensidade de Chuva")
+                st.caption("Queda acentuada de alunos nos dias de tempestade (>15 mm).")
                 
-                chart_d_bar = alt.Chart(df_d).mark_bar(cornerRadiusTopLeft=6, cornerRadiusTopRight=6, color=chart_primary).encode(
-                    x=alt.X("dia_nome:N", sort=["Segunda", "Terça", "Quarta", "Quinta", "Sexta"], title=None, axis=alt.Axis(labelAngle=0)),
+                chart_ch_bar = alt.Chart(df_ch_agg).mark_bar(cornerRadiusTopLeft=6, cornerRadiusTopRight=6, color="#0284c7").encode(
+                    x=alt.X("faixa_chuva:N", title=None, axis=alt.Axis(labelAngle=0)),
                     y=alt.Y("consumo_medio:Q", title="Média de Refeições Servidas"),
                     tooltip=[
-                        alt.Tooltip("dia_nome:N", title="Dia da Semana"),
-                        alt.Tooltip("consumo_medio:Q", title="Média (refeições)"),
-                        alt.Tooltip("count:Q", title="Total de Dias")
+                        alt.Tooltip("faixa_chuva:N", title="Condição Climática"),
+                        alt.Tooltip("consumo_medio:Q", title="Média de Refeições"),
+                        alt.Tooltip("count:Q", title="Total de Dias no Histórico")
                     ]
-                ).properties(height=260).configure_axis(
-                    labelColor=chart_text, titleColor=chart_text, gridColor=chart_grid,
-                    labelFont="Inter", titleFont="Inter"
-                ).configure_view(stroke=None, fill="transparent")
-                st.altair_chart(chart_d_bar, use_container_width=True)
+                ).properties(height=260).interactive()
+                st.altair_chart(chart_ch_bar, use_container_width=True)
                 
-            with col_d2:
-                st.markdown("##### ️ Sazonalidade ao Longo dos Meses do Ano Letivo")
-                st.caption("Picos no meio dos semestres e quedas típicas em inícios de ano letivo e períodos de recesso.")
+            with col_c2:
+                st.markdown("##### Relação Chuva (mm) vs. Refeições Servidas")
+                st.caption("Cada ponto representa um dia letivo real; a linha vermelha mostra a tendência.")
                 
-                df_dash_mes = df_dash.copy()
-                df_dash_mes["mes_nome"] = df_dash_mes["mes"].map(meses_map)
-                df_m = df_dash_mes.groupby(["mes", "mes_nome"])["consumo"].mean().reset_index().sort_values("mes")
-                df_m["consumo_medio"] = df_m["consumo"].round(1)
+                chart_ch_scatter = alt.Chart(df_ch).mark_circle(size=45, opacity=0.6, color="#0284c7").encode(
+                    x=alt.X("precipitation_sum:Q", title="Volume de Chuva (mm)"),
+                    y=alt.Y("consumo:Q", title="Refeições Servidas"),
+                    tooltip=[
+                        alt.Tooltip("data:N", title="Data"),
+                        alt.Tooltip("precipitation_sum:Q", title="Chuva (mm)"),
+                        alt.Tooltip("consumo:Q", title="Consumo Real"),
+                        alt.Tooltip("prato_principal:N", title="Prato")
+                    ]
+                )
+                line_trend = chart_ch_scatter.transform_regression("precipitation_sum", "consumo").mark_line(color="#ef4444", strokeWidth=2.5)
+                st.altair_chart((chart_ch_scatter + line_trend).properties(height=260).interactive(), use_container_width=True)
+
+            col_c3, col_c4 = st.columns(2)
+            with col_c3:
+                st.markdown("##### Frequência Discente por Faixa de Temperatura")
+                st.caption("Adesão de estudantes conforme a temperatura máxima registrada.")
                 
-                chart_m_bar = alt.Chart(df_m).mark_bar(cornerRadiusTopLeft=6, cornerRadiusTopRight=6, color=chart_accent).encode(
-                    x=alt.X("mes_nome:N", sort=list(meses_map.values()), title=None, axis=alt.Axis(labelAngle=0)),
+                df_ch["faixa_temp"] = pd.cut(
+                    df_ch["temperature_2m_max"],
+                    bins=[-10, 20, 25, 30, 50],
+                    labels=["Frio (<20°C)", "Agradável (20 a 25°C)", "Calor Moderado (25 a 30°C)", "Calor Intenso (>30°C)"]
+                )
+                df_t_agg = df_ch.groupby("faixa_temp", observed=False)["consumo"].agg(["count", "mean"]).reset_index()
+                df_t_agg["consumo_medio"] = df_t_agg["mean"].round(1)
+                
+                chart_temp_bar = alt.Chart(df_t_agg).mark_bar(cornerRadiusTopLeft=6, cornerRadiusTopRight=6, color="#f59e0b").encode(
+                    x=alt.X("faixa_temp:N", title=None, axis=alt.Axis(labelAngle=0)),
                     y=alt.Y("consumo_medio:Q", title="Média de Refeições"),
                     tooltip=[
-                        alt.Tooltip("mes_nome:N", title="Mês"),
-                        alt.Tooltip("consumo_medio:Q", title="Média (ref)")
+                        alt.Tooltip("faixa_temp:N", title="Faixa Térmica"),
+                        alt.Tooltip("consumo_medio:Q", title="Média de Refeições"),
+                        alt.Tooltip("count:Q", title="Total de Dias")
                     ]
-                ).properties(height=260).configure_axis(
-                    labelColor=chart_text, titleColor=chart_text, gridColor=chart_grid,
-                    labelFont="Inter", titleFont="Inter"
-                ).configure_view(stroke=None, fill="transparent")
-                st.altair_chart(chart_m_bar, use_container_width=True)
+                ).properties(height=260).interactive()
+                st.altair_chart(chart_temp_bar, use_container_width=True)
+                
+            with col_c4:
+                st.markdown("##### Matriz de Diagnóstico Meteorológico & Ação")
+                st.caption("Regras de calibração automática aplicadas pelo artefato preditivo.")
+                
+                d_sec = (df_ch["precipitation_sum"] == 0).sum()
+                m_sec = df_ch[df_ch["precipitation_sum"] == 0]["consumo"].mean()
+                d_gar = ((df_ch["precipitation_sum"] > 0) & (df_ch["precipitation_sum"] <= 5)).sum()
+                m_gar = df_ch[(df_ch["precipitation_sum"] > 0) & (df_ch["precipitation_sum"] <= 5)]["consumo"].mean()
+                d_chu = ((df_ch["precipitation_sum"] > 5) & (df_ch["precipitation_sum"] <= 15)).sum()
+                m_chu = df_ch[(df_ch["precipitation_sum"] > 5) & (df_ch["precipitation_sum"] <= 15)]["consumo"].mean()
+                d_tem = (df_ch["precipitation_sum"] > 15).sum()
+                m_tem = df_ch[df_ch["precipitation_sum"] > 15]["consumo"].mean()
+                
+                df_matriz_clima = pd.DataFrame([
+                    {"Condição Climática": "Dia Seco (0 mm)", "Datas": f"{d_sec}d", "Média Real": f"{m_sec:.0f} ref" if pd.notna(m_sec) else "-", "Regra do Artefato": "Margem protetiva plena (+12 ref)."},
+                    {"Condição Climática": "Garoa (0.1 a 5 mm)", "Datas": f"{d_gar}d", "Média Real": f"{m_gar:.0f} ref" if pd.notna(m_gar) else "-", "Regra do Artefato": "Pequeno recuo automático (-5 ref)."},
+                    {"Condição Climática": "Chuva Forte (5.1 a 15 mm)", "Datas": f"{d_chu}d", "Média Real": f"{m_chu:.0f} ref" if pd.notna(m_chu) else "-", "Regra do Artefato": "Recuo preventivo (-12 ref)."},
+                    {"Condição Climática": "Tempestade (>15 mm)", "Datas": f"{d_tem}d", "Média Real": f"{m_tem:.0f} ref" if pd.notna(m_tem) else "-", "Regra do Artefato": "Zera margem extra e corta excesso."}
+                ])
+                st.dataframe(df_matriz_clima, use_container_width=True, hide_index=True)
 
-            # Linha 2: Curva Semanal Comparativa por Ano e Matriz Cruzada Mês x Dia
-            col_d3, col_d4 = st.columns(2)
-            with col_d3:
-                st.markdown("##### Curva Semanal Comparativa por Ano (2023–2026)")
-                st.caption("Comprova que a queda de sexta-feira é um padrão estrutural repetido ano a ano (Dissertação Fig. 10).")
+            with st.expander("🖼️ Ver Figuras Acadêmicas da Dissertação (Figuras 08 e 09)", expanded=False):
+                col_f_cl1, col_f_cl2 = st.columns(2)
+                with col_f_cl1:
+                    p8 = os.path.join(ROOT_DIR, "resultados", "figuras", "eda", "figura_08_sensibilidade_clima_precipitacao.png")
+                    if os.path.exists(p8):
+                        st.image(p8, caption="Figura 08: Sensibilidade Climática por Faixas de Precipitação", use_container_width=True)
+                with col_f_cl2:
+                    p9 = os.path.join(ROOT_DIR, "resultados", "figuras", "eda", "figura_09_relacao_temperatura_consumo.png")
+                    if os.path.exists(p9):
+                        st.image(p9, caption="Figura 09: Relação Térmica entre Temperatura Máxima e Consumo", use_container_width=True)
+
+    # --------------------------------------------------------------------------
+    # SUBSEÇÃO 5: PODER PREDITIVO DOS ATRIBUTOS (EDA & MULTIVARIADA)
+    # --------------------------------------------------------------------------
+    elif "5. Poder Preditivo" in secao_dash:
+        with st.container(border=True):
+            st.markdown("#### 🌪️ Ranking de Importância e Poder Preditivo dos Atributos")
+            st.write(
+                "**Por que usamos cada variável nos modelos preditivos?** "
+                "Para provar cientificamente à banca examinadora quais fatores realmente governam o refeitório, "
+                "analisamos a correlação de Pearson de todos os atributos. O histórico recente e o dia da semana explicam a maior parte da demanda, "
+                "enquanto a chuva comum tem impacto moderado e dias de encerramento acadêmico provocam quedas acentuadas."
+            )
+            
+            # Tornado Chart Interativo dos Atributos
+            dados_tornado = [
+                {"Atributo": "Nível Basal Recente (Mediana 10d)", "Correlacao": 0.658, "Tipo": "Histórico / Inércia", "Impacto": "Positivo Forte"},
+                {"Atributo": "Inércia Mesmo Dia da Semana", "Correlacao": 0.656, "Tipo": "Calendário / Ciclo", "Impacto": "Positivo Forte"},
+                {"Atributo": "Média Móvel Exponencial (EWMA)", "Correlacao": 0.642, "Tipo": "Histórico / Inércia", "Impacto": "Positivo Forte"},
+                {"Atributo": "Dias até o Fim do Semestre", "Correlacao": 0.334, "Tipo": "Calendário / Prazo", "Impacto": "Positivo Moderado"},
+                {"Atributo": "Cardápio: Carne Bovina", "Correlacao": 0.285, "Tipo": "Cardápio / Atratividade", "Impacto": "Positivo Moderado"},
+                {"Atributo": "Dias Decorridos desde Início", "Correlacao": 0.162, "Tipo": "Calendário / Fase", "Impacto": "Positivo Leve"},
+                {"Atributo": "Cardápio: Carne Suína", "Correlacao": 0.082, "Tipo": "Cardápio / Atratividade", "Impacto": "Positivo Leve"},
+                {"Atributo": "Previsão de Chuva (mm)", "Correlacao": 0.041, "Tipo": "Meteorologia", "Impacto": "Neutro / Residual"},
+                {"Atributo": "Cardápio: Aves / Frango", "Correlacao": 0.035, "Tipo": "Cardápio / Atratividade", "Impacto": "Neutro / Padrão"},
+                {"Atributo": "Previsão Temperatura Máxima", "Correlacao": -0.029, "Tipo": "Meteorologia", "Impacto": "Neutro / Residual"},
+                {"Atributo": "Preparo: Grelhado / Chapa", "Correlacao": -0.098, "Tipo": "Cardápio / Cocção", "Impacto": "Negativo Leve"},
+                {"Atributo": "Cardápio: Peixe / Pescados", "Correlacao": -0.198, "Tipo": "Cardápio / Rejeição", "Impacto": "Negativo Moderado"},
+                {"Atributo": "Dia da Semana: Sexta-feira", "Correlacao": -0.215, "Tipo": "Calendário / Evasão", "Impacto": "Negativo Moderado"},
+                {"Atributo": "Últimos 3 Dias de Semestre", "Correlacao": -0.380, "Tipo": "Calendário / Desmobilização", "Impacto": "Negativo Severo"}
+            ]
+            df_tor = pd.DataFrame(dados_tornado)
+            
+            col_t1, col_t2 = st.columns([1.2, 0.8])
+            with col_t1:
+                st.markdown("##### Tornado Chart: Correlação dos Atributos com o Consumo Real")
+                st.caption("Verde indica correlação positiva (aumenta o consumo); Vermelho indica efeito redutor.")
                 
-                df_sem_ano = df_validos_geral[df_validos_geral["dia_da_semana"].isin(dias_ordem)].groupby(["ano", "dia_da_semana"])["consumo"].mean().reset_index()
-                df_sem_ano["dia_nome"] = df_sem_ano["dia_da_semana"].map(dias_map)
-                df_sem_ano["ano_str"] = df_sem_ano["ano"].astype(str)
-                
-                chart_sem_ano = alt.Chart(df_sem_ano).mark_line(point=True, strokeWidth=2.2).encode(
-                    x=alt.X("dia_nome:N", sort=["Segunda", "Terça", "Quarta", "Quinta", "Sexta"], title=None, axis=alt.Axis(labelAngle=0)),
-                    y=alt.Y("consumo:Q", title="Média de Refeições"),
-                    color=alt.Color("ano_str:N", title="Ano Letivo", scale=alt.Scale(scheme="category10"),
-                                    legend=alt.Legend(orient="top", labelFont="Inter", titleFont="Inter")),
+                chart_tornado = alt.Chart(df_tor).mark_bar(cornerRadiusTopRight=4, cornerRadiusBottomRight=4).encode(
+                    y=alt.Y("Atributo:N", sort="-x", title=None),
+                    x=alt.X("Correlacao:Q", title="Correlação Linear de Pearson (r)"),
+                    color=alt.condition(
+                        alt.datum.Correlacao > 0,
+                        alt.value("#008744"),
+                        alt.value("#ef4444")
+                    ),
                     tooltip=[
-                        alt.Tooltip("ano_str:N", title="Ano"),
-                        alt.Tooltip("dia_nome:N", title="Dia"),
-                        alt.Tooltip("consumo:Q", title="Média (ref)", format=".0f")
+                        alt.Tooltip("Atributo:N", title="Atributo"),
+                        alt.Tooltip("Correlacao:Q", title="Correlação (r)", format="+.3f"),
+                        alt.Tooltip("Tipo:N", title="Dimensão"),
+                        alt.Tooltip("Impacto:N", title="Efeito no Consumo")
                     ]
-                ).properties(height=260).configure_axis(
-                    labelColor=chart_text, titleColor=chart_text, gridColor=chart_grid,
-                    labelFont="Inter", titleFont="Inter"
-                ).configure_legend(
-                    labelColor=chart_text, titleColor=chart_text
-                ).configure_view(stroke=None, fill="transparent")
-                st.altair_chart(chart_sem_ano, use_container_width=True)
+                ).properties(height=380).interactive()
+                st.altair_chart(chart_tornado, use_container_width=True)
+                
+            with col_t2:
+                st.markdown("##### Autocorrelação Serial (Ciclos Semanais)")
+                st.caption("Picos periódicos nos lags 5, 10 e 15 provam a forte sazonalidade semanal de 5 dias úteis.")
+                
+                # Autocorrelação real
+                lags = list(range(1, 21))
+                autocorr_vals = []
+                s_cons = df_validos_geral["consumo"].dropna()
+                for lg in lags:
+                    autocorr_vals.append(float(s_cons.autocorr(lag=lg)))
+                    
+                df_autocorr = pd.DataFrame({
+                    "Lag": lags,
+                    "Autocorrelacao": autocorr_vals,
+                    "Destaque": ["Pico Semanal (5d)" if l in [5, 10, 15] else "Lag Ordinário" for l in lags]
+                })
+                
+                chart_auto = alt.Chart(df_autocorr).mark_bar(cornerRadiusTopLeft=3, cornerRadiusTopRight=3).encode(
+                    x=alt.X("Lag:O", title="Defasagem Temporal (Dias Úteis)"),
+                    y=alt.Y("Autocorrelacao:Q", title="Autocorrelação"),
+                    color=alt.Color("Destaque:N", scale=alt.Scale(domain=["Pico Semanal (5d)", "Lag Ordinário"], range=["#008744", "#94a3b8"]), legend=alt.Legend(orient="top", title=None)),
+                    tooltip=[
+                        alt.Tooltip("Lag:O", title="Lag (Dias Úteis)"),
+                        alt.Tooltip("Autocorrelacao:Q", title="Autocorrelação", format=".3f"),
+                        alt.Tooltip("Destaque:N", title="Classificação")
+                    ]
+                ).properties(height=380).interactive()
+                st.altair_chart(chart_auto, use_container_width=True)
 
-            with col_d4:
-                st.markdown("#####  Matriz Cruzada de Presença (Mês × Dia da Semana)")
-                st.caption("Guia de consulta rápida com a média histórica de refeições servidas em cada época do ano.")
-                
-                df_mat = df_dash[df_dash["dia_da_semana"].isin(dias_ordem)].copy()
-                df_mat["dia_nome"] = df_mat["dia_da_semana"].map(dias_map)
-                df_mat["mes_nome"] = df_mat["mes"].map(meses_map)
-                
-                piv = df_mat.pivot_table(index=["mes", "mes_nome"], columns="dia_nome", values="consumo", aggfunc="mean").round(0).reset_index()
-                dias_cols = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta"]
-                for c in dias_cols:
-                    if c not in piv.columns:
-                        piv[c] = np.nan
-                piv = piv.sort_values("mes")
-                
-                piv_display = pd.DataFrame()
-                piv_display["Mês"] = piv["mes_nome"]
-                for c in dias_cols:
-                    piv_display[c] = piv[c].apply(lambda x: f"{int(x)} ref" if pd.notna(x) else "-")
-                
-                df_mat_mes_dict = df_dash.groupby("mes")["consumo"].mean().round(0).to_dict()
-                piv_display["Média Mês"] = piv["mes"].map(df_mat_mes_dict).apply(lambda x: f"{int(x)} ref" if pd.notna(x) else "-")
-                
-                st.dataframe(piv_display, use_container_width=True, hide_index=True)
-                
-            st.caption("**Dica Prática:** A presença discente em sextas-feiras tem recuo médio de ~20% em todos os anos. Reduzir as quantidades na sexta-feira previne sobras expressivas no encerramento da semana.")
+            with st.expander("🖼️ Ver Figuras Acadêmicas da Dissertação (Figuras 10, 11 e 12)", expanded=False):
+                col_f_e1, col_f_e2, col_f_e3 = st.columns(3)
+                with col_f_e1:
+                    p10 = os.path.join(ROOT_DIR, "resultados", "figuras", "eda", "figura_10_matriz_correlacao_multivariada.png")
+                    if os.path.exists(p10):
+                        st.image(p10, caption="Figura 10: Matriz de Correlação Multivariada", use_container_width=True)
+                with col_f_e2:
+                    p11 = os.path.join(ROOT_DIR, "resultados", "figuras", "eda", "figura_11_autocorrelacao_serial.png")
+                    if os.path.exists(p11):
+                        st.image(p11, caption="Figura 11: Autocorrelação Serial (Lags 1 a 20)", use_container_width=True)
+                with col_f_e3:
+                    p12 = os.path.join(ROOT_DIR, "resultados", "figuras", "eda", "figura_12_tornado_importancia_atributos.png")
+                    if os.path.exists(p12):
+                        st.image(p12, caption="Figura 12: Tornado Chart de Poder Preditivo", use_container_width=True)
 
-# ==============================================================================
-# PÁGINA 2: PREVISÕES (ORDEM DE PREPARO E SIMULADOR "E SE...?")
-# ==============================================================================
 elif pagina_ativa == "Previsões":
     st.markdown('<div class="story-badge">ETAPA 2 DE 6 • ORDEM DE PREPARO SEMANAL (t+1)</div>', unsafe_allow_html=True)
     st.markdown("### Previsões e Ordem de Preparo Semanal")
