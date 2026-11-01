@@ -5,7 +5,7 @@ Nível Basal;media_5d;Média móvel de consumo dos últimos 5 dias normais;0.585
 Nível Basal;nivel_exponencial;Média móvel exponencial causal (alfa=0.2);0.58;0.243;0.599;-0.042;0.5991135095067375
 Nível Basal;nivel_10d;Mediana móvel dos 10 dias normais anteriores;0.557;0.177;0.572;-0.091;0.5717483327191123
 Nível Basal;ultimo_consumo;Último consumo diário observado antes da sexta;0.441;0.305;0.464;0.05;0.46432720045049597
-Calendário;dias_ate_fim_bloco;Dias letivos restantes até o recesso/término de semestre;0.33;0.391;0.334;0.345;0.3338104899988374
+Calendário;dias_ate_fim_bloco;Dias letivos restantes até o término de semestre;0.33;0.391;0.334;0.345;0.3338104899988374
 Calendário;dias_letivos_na_semana;Quantidade de dias de aula na semana da refeição;0.176;0.414;0.202;0.206;0.20210379186658084
 Cardápio;efeito_proteina;Razão histórica suavizada por Bayes da proteína do dia;0.236;0.18;0.153;-0.023;0.15252524837053605
 Cardápio;efeito_preparo;Razão histórica suavizada do método de preparo;0.204;0.006;0.1;0.008;0.10001070704720405

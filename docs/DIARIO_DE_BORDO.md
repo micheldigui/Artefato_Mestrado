@@ -72,25 +72,38 @@
 
 ---
 
-### [Entrada #003] – 01/11/2026: Análise Exploratória (EDA) e Comparativo dos Regimes Humanos
+### [Entrada #003] – 01/11/2026: Análise Exploratória (EDA), Métricas Operacionais e Suíte de 12 Figuras
 * **Contexto e Motivação:**
-  * Necessidade de investigar empiricamente quais variáveis realmente governam a demanda de refeições e avaliar as diferenças estruturais entre o regime de Reservas Discentes (2023-2025) e o Planejamento Técnico da Nutricionista (2026).
-  * Obter as evidências estatísticas para embasar a justificativa teórica dos 4 cenários que entrarão no torneio de modelos.
+  * Investigação empírica dos fatores que explicam a demanda de refeições e comparação quantitativa entre o regime de Reservas Discentes (2023-2025) e o Planejamento Técnico da Nutricionista (2026).
+  * Foco estrito em métricas operacionais de precisão (MAE, RMSE, WAPE) e balanço de segurança alimentar (sobra potencial vs. déficit potencial), omitindo o conceito de viés e postergando o custo financeiro para os capítulos finais de impacto na gestão pública.
+  * Expansão da produção gráfica para compor a suíte completa de evidências dos resultados da dissertação.
 * **Ações Executadas:**
   1. **Módulo de EDA (`src/core/eda.py`):**
-     * Cálculo comparativo de métricas de acurácia, viés e risco de falta entre reservas discentes e quantitativo institucional.
-     * Ranking de correlações lineares (Pearson) e relativas (descontando o nível basal) para os 18 atributos preditores candidatos.
-     * Mapeamento de sazonalidade semanal e efeito de desmobilização no término do período acadêmico.
-     * Geração de 5 tabelas analíticas em `resultados/eda/` e 5 figuras em alta resolução em `resultados/figuras/eda/`.
-  2. **Principais Descobertas Científicas:**
-     * *O Dilema Humano:* As reservas discentes (2023-2025) sofriam de **subnotificação crônica** (viés médio de -15.8 refeições, WAPE de 19.9% e risco de falta em 65.6% dos dias). O planejamento da nutricionista (2026) elevou a correlação para $r=0.772$, reduziu o WAPE para 13.6% e opera com **superestimativa protetiva intencional** (+10.4 refeições) para mitigar o risco social.
+     * Cálculo de métricas operacionais de acurácia e balanço de atendimento discente.
+     * Ranking de correlações lineares (Pearson) e relativas para os 18 atributos preditores candidatos.
+     * Geração da **Suíte de 12 Figuras Acadêmicas** em alta resolução (150 DPI) salvas em `resultados/figuras/eda/`:
+       * *Figura 01:* Confronto dos Métodos Humanos (Dispersão x Consumo Real: Reservas Discentes vs Nutricionista).
+       * *Figura 02:* Balanço Acumulado de Sobras vs Faltas Potenciais (Volume de refeições em sobra e falta).
+       * *Figura 03:* Perfil Semanal de Consumo Facetado por Ano (Consistência longitudinal de 2023 a 2026).
+       * *Figura 04:* Sazonalidade Mensal do Consumo ao Longo do Calendário Letivo.
+       * *Figura 05:* Desmobilização Acadêmica no Término do Semestre (Queda na reta final).
+       * *Figura 06:* Demanda e Frequência por Tipo de Proteína no Cardápio.
+       * *Figura 07:* Consumo Conforme a Técnica Culinária de Preparo.
+       * *Figura 08:* Sensibilidade Climática por Faixas de Precipitação Prevista.
+       * *Figura 09:* Relação Térmica entre Temperatura Máxima e Consumo Real.
+       * *Figura 10:* Matriz de Correlação Multivariada (Heatmap).
+       * *Figura 11:* Autocorrelação Serial do Consumo Escolar (Lags 1 a 20 dias úteis).
+       * *Figura 12:* Tornado Chart - Ranking Geral de Poder Preditivo dos Atributos.
+  2. **Principais Descobertas das Métricas:**
+     * *Acurácia Comparada:* O método da nutricionista (2026) supera amplamente as reservas discentes (2023-2025), com correlação saltando de $r=0.574$ para $r=0.772$, MAE caindo de $27.0$ para $23.7$ e WAPE de $19.9\%$ para $13.6\%$.
+     * *Risco de Desabastecimento:* No regime discente, em $65.6\%$ dos dias houve déficit potencial (acumulando 9.332 refeições faltantes no agendamento). Com a nutricionista, a taxa de déficit potencial cai para $39.6\%$ (apenas 994 refeições acumuladas).
      * *Preditores Críticos:* Nível basal recente ($r=0.658$), inércia do mesmo dia da semana anterior ($r=0.656$) e dias restantes até o término do semestre ($r=0.334$) são os motores principais do consumo.
      * *Desmobilização de Fim de Semestre:* Nos últimos 3 dias letivos do semestre, o consumo médio desaba em **56.1%** (de 149.0 para 65.4 refeições), comprovando a importância da feature ordinal de calendário.
      * *Desmistificação do Clima:* Previsões de chuva ($r=+0.041$) e temperatura máxima ($r=-0.029$) possuem correlação linear insignificante com o consumo ordinário escolar, justificando testar o clima como cenário complementar, sem torná-lo dependência obrigatória.
   3. **Notebook 03:**
-     * Criação de `notebooks/03_analise_exploratoria_eda.ipynb` com narrativa detalhada e inclusão das figuras salvas.
+     * Atualização do notebook `notebooks/03_analise_exploratoria_eda.ipynb` integrando as 12 figuras e texto explicativo pronto para a dissertação.
 * **Decisões Técnicas Registradas:**
-  * *Decisão:* Os 4 cenários de modelagem para o torneio Walk-Forward ficam formalmente justificados pelas evidências da EDA: Cenário 1 (Calendário + Nível Basal - autônomo), Cenário 2 (+ Cardápio), Cenário 3 (+ Clima - teste não-linear) e Cenário 4 (+ Nutricionista - abordagem híbrida colaborativa).
+  * *Decisão:* Remover métricas de viés e cálculos de custo em R$ das análises exploratórias, mantendo a EDA focada estritamente no comportamento físico da demanda e nas métricas de erro (MAE, RMSE, WAPE) e balanço operacional (sobra vs. déficit de refeições). Os custos em reais serão calculados no módulo final de impacto financeiro e tomada de decisão.
 
 ---
 
