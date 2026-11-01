@@ -805,3 +805,4 @@ novo_dashboard = '''if pagina_ativa == "Dashboard":
 conteudo_final = parte_antes + novo_dashboard + parte_depois
 app_path.write_text(conteudo_final, encoding="utf-8")
 print("Reconstrução da Página 1 (Dashboard) concluída com sucesso!")
+
