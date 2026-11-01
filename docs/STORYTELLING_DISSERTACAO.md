@@ -103,3 +103,4 @@ A dissertação conta uma história clássica de **pesquisa aplicada baseada em 
   * Simulador de Cenários Walk-Forward para a banca e operadores testarem qualquer data histórica.
   * Módulo de Compras Quinzenais autônomo.
   * Auditoria de Dados e Teste de Vazamento interativo.
+

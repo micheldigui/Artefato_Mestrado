@@ -1,0 +1,32 @@
+{
+  "auditoria_realizada_em": "01/11/2026 13:20:04",
+  "testes": [
+    {
+      "teste": "Estrutura Operacional e Restrições de Horizonte",
+      "sucesso": true,
+      "erros": [],
+      "detalhe": "Origens em sextas, antecedências corretas e horizonte t2 estritamente autônomo."
+    },
+    {
+      "teste": "Qualidade Numérica e Ausência de Constantes",
+      "sucesso": true,
+      "erros": [],
+      "detalhe": "Sem valores infinitos, níveis basais positivos e sem colunas nulas/constantes."
+    },
+    {
+      "teste": "Teste Unitário de Não-Vazamento Temporal (Zero Data Leakage)",
+      "sucesso": true,
+      "erros": [],
+      "origens_auditadas": 5,
+      "detalhes": [
+        "Sexta 31/03/2023: 623 consumos futuros embaralhados -> Predição 100% Invariante.",
+        "Sexta 16/02/2024: 477 consumos futuros embaralhados -> Predição 100% Invariante.",
+        "Sexta 14/02/2025: 329 consumos futuros embaralhados -> Predição 100% Invariante.",
+        "Sexta 14/11/2025: 174 consumos futuros embaralhados -> Predição 100% Invariante.",
+        "Sexta 23/10/2026: 6 consumos futuros embaralhados -> Predição 100% Invariante."
+      ],
+      "conclusao": "PROVADO: Os modelos não enxergam nenhuma informação futura posterior à sexta de corte."
+    }
+  ],
+  "todos_passaram": true
+}

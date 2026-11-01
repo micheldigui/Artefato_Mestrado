@@ -48,10 +48,34 @@
 
 ---
 
+### [Entrada #002] – 01/11/2026: Camada Gold e Prova Matemática de Zero Data Leakage
+* **Contexto e Motivação:**
+  * O principal ponto fraco detectado nas primeiras versões da pesquisa foi o vazamento de dados decorrente de médias móveis calculadas globalmente.
+  * O objetivo deste marco foi implementar uma engenharia de atributos matematicamente causal, orientada pela **sexta-feira de corte (`origem`)**, e provar por meio de auditoria adversarial automatizada que nenhuma informação futura vaza para o passado.
+* **Ações Executadas:**
+  1. **Módulo de Atributos Gold (`src/core/gold_features.py`):**
+     * Construção de atributos causais resumidos por data de emissão: nível basal recente (medianas de 10 e 20 dias, EWMA $\alpha=0.2$), dispersão recente, histórico do mesmo dia da semana e distância ordinal para início e fim do bloco letivo contínuo.
+     * Suavização empírica Bayesiana para o efeito do cardápio (pratos, proteínas e métodos de preparo), evitando sobreajuste em receitas raras.
+     * Separação estrita dos dois horizontes decisórios:
+       * **Horizonte $T+1$ (Preparo Diário):** 705 linhas x 79 colunas (3 a 7 dias de antecedência, com cardápio e quantitativo humano da nutricionista/reservas discentes).
+       * **Horizonte $T+2$ (Compras Quinzenais):** 705 linhas x 77 colunas (10 a 14 dias de antecedência, estritamente autônomo, sem permissão de utilizar planos humanos).
+     * Geração do dicionário de metadados em `dados/gold/gold_dicionario_atributos.csv`.
+  2. **Módulo de Auditoria Automatizada (`src/core/audit_leakage.py`):**
+     * Bateria de 3 grandes suítes de testes:
+       * *Estrutura Operacional:* Validação de emissões 100% em sextas-feiras, antecedências válidas e garantia de ausência de planos humanos em $T+2$ [APROVADO].
+       * *Qualidade Numérica:* Sem infinitos, níveis basais estritamente positivos e ausência de atributos constantes [APROVADO].
+       * *Teste Unitário Adversarial Anti-Vazamento:* Embaralhamento aleatório de consumos futuros em 5 sextas-feiras representativas de diferentes semestres (2023 a 2026). Comprovada a invariância matemática de todos os preditores (`assert_frame_equal`) [APROVADO].
+  3. **Notebook 02:**
+     * Criação de `notebooks/02_camada_gold_e_auditoria_vazamento.ipynb` documentando a falha da validação cruzada tradicional, o protocolo de sexta-feira e a execução interativa dos testes para a banca examinadora.
+* **Decisões Técnicas Registradas:**
+  * *Decisão:* Tratar variáveis climáticas observadas (`chuva_mm`, `temp_max`) como "Oráculo Ex-Post", utilizadas exclusivamente para análise retrospectiva de sensibilidade. Para o treinamento e inferência preditiva, os modelos utilizam unicamente as variáveis de previsão horária arquivadas no momento da emissão (`previsao_chuva_mm`, `previsao_temp_max`).
+
+---
+
 ### [Planejamento Próximos Passos]
-* **Marco 2:** Camada Gold ($T+1$ e $T+2$) com corte estrito às sextas-feiras e teste unitário automatizado de Não-Vazamento Temporal (`audit_leakage.py`).
 * **Marco 3:** Análise Exploratória de Dados (EDA) e isolamento dos fatores de influência (cardápio, dia da semana, calendário e clima).
 * **Marco 4:** Torneio de Algoritmos em Validação Walk-Forward (12 meses de treino) comparando Baselines, Modelos Lineares, Árvores e Boosting.
 * **Marco 5:** Modelo Híbrido Adaptativo (IA + Nutricionista) e Calibração de Margens de Segurança Conformal (+12 a +18 refeições).
 * **Marco 6:** Desenvolvimento da Aplicação Streamlit Modular (`src/app/`) com Simulador Interativo, Visão Executiva e Módulo de Compras.
 * **Marco 7:** Validação Prospectiva em 2026, exportação de tabelas/figuras finais e fechamento das evidências empíricas da dissertação.
+

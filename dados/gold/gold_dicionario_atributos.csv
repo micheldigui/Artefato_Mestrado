@@ -1,0 +1,20 @@
+﻿grupo;coluna;disponivel_em;descricao
+identificador;origem;t1 e t2;Sexta-feira de emissão da previsão (marco de corte temporal)
+identificador;data;t1 e t2;Dia previsto para o almoço no refeitório
+alvo;consumo;resultado;Refeições efetivamente consumidas na catraca
+alvo;alvo_relativo;resultado;Consumo normalizado em relação ao nível basal (consumo / nivel_base)
+controle;tratamento;resultado;normal, previsivel_calendario, alto_mantido, isolado_sem_explicacao, etc.
+controle;usar_no_treino;resultado;Booleano indicando elegibilidade para treinamento supervisionado
+nivel_basal;nivel_base;t1 e t2;Média entre nível_10d e nível_mesmo_dia
+nivel_basal;nivel_10d;t1 e t2;Mediana dos 10 dias úteis normais anteriores à emissão
+nivel_basal;nivel_20d;t1 e t2;Mediana dos 20 dias úteis normais anteriores à emissão
+nivel_basal;nivel_mesmo_dia;t1 e t2;Mediana das 4 ocorrências normais do mesmo dia da semana
+nivel_basal;nivel_exponencial;t1 e t2;Média móvel exponencial causal com alfa 0.2
+calendario;dias_ate_fim_bloco;t1 e t2;Dias letivos restantes até o término do semestre acadêmico
+calendario;dias_desde_inicio_bloco;t1 e t2;Dias letivos transcorridos desde o início do período
+cardapio;prato_padronizado;t1 e t2;Nome padronizado do prato principal
+cardapio;efeito_proteina;t1 e t2;Razão histórica de consumo suavizada por prior Bayesiano
+plano_humano;plano_nutricionista;somente t1;Estimativa operacional lançada pela nutricionista na sexta-feira
+plano_humano;reserva_discente;somente t1;Reservas discentes ativas no período 2023-2025
+clima_previsto;previsao_chuva_mm;t1 e t2;Previsão de precipitação arquivada pela API no dia da emissão
+oraculo_clima;oraculo_chuva_mm;ex-post;Chuva observada na estação meteorológica (apenas para auditoria)

@@ -50,3 +50,4 @@ HORIZONTES = {
 
 # Janelas Temporais de Treinamento
 JANELA_TREINO_PADRAO_MESES = 12
+

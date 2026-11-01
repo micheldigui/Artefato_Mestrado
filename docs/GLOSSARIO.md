@@ -64,3 +64,4 @@ Para não contaminar o aprendizado dos modelos com eventos anômalos que não se
 | **Sobra Potencial (Desperdício)** | Excesso de comida preparada além do consumo real. Representa custo financeiro e descarte. | $\max(0, \hat{y} - y)$ |
 | **Déficit Potencial (Risco Social)** | Falta de comida preparada para atender os alunos presentes. Representa risco de fome para estudantes em vulnerabilidade. | $\max(0, y - \hat{y})$ |
 | **Custo do Desperdício Evitado** | Economia em reais calculada sobre o valor oficial do contrato por refeição terceirizada. | $\Delta \text{Sobra} \times \text{Valor Contratual}$ |
+

@@ -285,3 +285,4 @@ if __name__ == "__main__":
     print("=== Pipeline Silver Executado com Sucesso! ===")
     for k, v in relatorio.items():
         print(f"  {k}: {v}")
+

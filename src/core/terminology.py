@@ -55,3 +55,4 @@ def obter_nome_cenario(chave: str) -> str:
 
 def obter_nome_tratamento(chave: str) -> str:
     return NOMES_TRATAMENTOS.get(chave, chave)
+
