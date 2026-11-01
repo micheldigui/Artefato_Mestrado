@@ -7,3 +7,4 @@ def test_zero_leakage_audit():
     assert rel["status_geral"] == "APROVADO - ZERO DATA LEAKAGE"
     for t in rel["testes"]:
         assert t["sucesso"] is True, f"Falha no teste: {t['teste']} - Erros: {t.get('erros')}"
+

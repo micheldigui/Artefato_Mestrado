@@ -9,3 +9,4 @@ def test_app_compilation():
     # Valida compilação de sintaxe
     res = py_compile.compile(str(app_main), doraise=True)
     assert res is not None
+

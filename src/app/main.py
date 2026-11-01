@@ -423,3 +423,4 @@ elif aba_selecionada == "🌊 Resiliência Climática & Teste Cego":
 # Rodapé Institucional
 st.markdown("---")
 st.caption("Artefato Analítico-Preditivo de Apoio à Decisão • Metodologia Design Science Research (DSR) • Desenvolvido para o Restaurante Estudantil • 2026")
+
