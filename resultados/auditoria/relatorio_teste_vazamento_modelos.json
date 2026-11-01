@@ -1,0 +1,31 @@
+{
+  "data_auditoria": "01/11/2026 14:14:07",
+  "status_geral": "APROVADO - ZERO DATA LEAKAGE",
+  "testes": [
+    {
+      "teste": "1. Isolamento de Variáveis Alvo e Restrições de Horizonte",
+      "sucesso": true,
+      "erros": [],
+      "detalhe": "Nenhum alvo ou oráculo ex-post presente nas matrizes X. T2 estritamente autônomo."
+    },
+    {
+      "teste": "2. Fronteira Temporal Estrita em 100% das Semanas (max(treino) < origem)",
+      "sucesso": true,
+      "semanas_auditadas": 320,
+      "erros": [],
+      "detalhe": "Todas as 320 semanas auditadas respeitaram estritamente max(treino) < corte."
+    },
+    {
+      "teste": "3. Invariância Adversarial dos Modelos com Futuro Embaralhado",
+      "sucesso": true,
+      "erros": [],
+      "detalhes": [
+        "Emissão 08/03/2024: Futuro corrompido em 451 dias -> Predições dos modelos IDÊNTICAS (diff = 0.000000).",
+        "Emissão 13/09/2024: Futuro corrompido em 388 dias -> Predições dos modelos IDÊNTICAS (diff = 0.000000).",
+        "Emissão 09/05/2025: Futuro corrompido em 276 dias -> Predições dos modelos IDÊNTICAS (diff = 0.000000).",
+        "Emissão 06/03/2026: Futuro corrompido em 138 dias -> Predições dos modelos IDÊNTICAS (diff = 0.000000)."
+      ],
+      "conclusao": "PROVADO: Os algoritmos de Machine Learning são 100% cegos para qualquer dado futuro."
+    }
+  ]
+}

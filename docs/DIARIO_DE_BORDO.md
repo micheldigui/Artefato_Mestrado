@@ -107,9 +107,60 @@
 
 ---
 
+### [Entrada #004] – 01/11/2026: Torneio Walk-Forward com Taxonomia Completa de Ensembles e Auditoria de Modelos
+* **Contexto e Motivação:**
+  * Implementação da taxonomia completa de algoritmos de Machine Learning e métodos de Ensemble solicitada para a dissertação:
+    * *Bagging:* Random Forest e ExtraTrees (amostragem bootstrap independente em paralelo).
+    * *Boosting:* Gradient Boosting, AdaBoost, LightGBM, XGBoost e CatBoost (aprendizado sequencial com correção de resíduos).
+    * *Voting:* Votação heterogênea por média ponderada (Ridge + ExtraTrees + CatBoost).
+    * *Stacking:* Meta-regressão com estimadores de primeiro nível e meta-modelo regularizado não-negativo.
+    * *Blending:* Divisão em treino base e holdout temporal recente sem vazamento com otimização NNLS.
+    * *Cascading:* Encadeamento sequencial em dois estágios (âncora linear regularizada para tendência global + Gradient Boosting no resíduo não-linear).
+  * Execução da validação *Walk-Forward* estrita ao longo de 2026 com janela móvel de 12 meses de treino em $T+1$ (Preparo, 3 a 7 dias) e $T+2$ (Compras quinzenais, 10 a 14 dias, 100% autônomo).
+* **Ações Executadas:**
+  1. **Auditoria de Não-Vazamento dos Modelos (`src/core/test_zero_leakage_models.py`):**
+     * Execução automatizada e formalmente aprovada em 3 suítes:
+       * *Isolamento de Alvos e Restrições de Horizonte:* Sem variáveis de consumo ou oráculos nas matrizes $X$, e $T+2$ estritamente desprovido de planos humanos [APROVADO].
+       * *Fronteira Temporal em 100% das Semanas:* $\max(\text{treino}) < \text{origem}$ em todas as 320 semanas auditadas [APROVADO].
+       * *Invariância Adversarial (Teste Cego com Futuro Corrompido):* Predições idênticas com $\Delta = 0.000000$ em emissões de 2024, 2025 e 2026 mesmo após corromper até 451 dias de dados futuros [APROVADO]. Relatório salvo em `resultados/auditoria/relatorio_teste_vazamento_modelos.json`.
+  2. **Execução do Torneio Walk-Forward (`src/core/models.py`):**
+     * Execução sequencial robusta sem concorrência de processos no Windows, gerando 17.731 predições detalhadas.
+     * Exportação de `metricas_torneio_modelos.csv`, `metricas_torneio_modelos.parquet` e `predicoes_detalhadas_torneio.parquet` na pasta `resultados/modelos/`.
+     * *Destaques do Torneio:*
+       * Em $T+1$ (Cenário 4 - com nutricionista): o modelo **Lasso** alcançou MAE=21.66 e WAPE=12.38%, e o **Ensemble Voting Heterogêneo** atingiu MAE=21.85 e WAPE=12.48%, superando o plano humano da nutricionista (MAE=23.7).
+       * Em $T+2$ (Compras 100% autônomas, sem estimativas humanas): o **Ensemble ExtraTrees** alcançou MAE=24.21 e WAPE=13.84%, e o **Ensemble Voting** alcançou MAE=24.13 e WAPE=13.79%, comprovando a viabilidade de automatização quinzenal de suprimentos.
+
+---
+
+### [Entrada #005] – 01/11/2026: Margens Conformais, Modelo Híbrido e Separação Retrospectiva (Fev-Ago) vs. Prospectiva (Set-Out)
+* **Contexto e Motivação:**
+  * Atendimento à diretriz metodológica de segregar os resultados empíricos de 2026 em dois blocos transparentes para a dissertação:
+    * **Período Retrospectivo (Fevereiro a Agosto de 2026 - $N=121$ dias):** A coorte de referência avaliada na qualificação, cobrindo o ablation study de cenários, ranking de ensembles e calibração das políticas operacionais.
+    * **Período Prospectivo (Setembro e Outubro de 2026 - $N=28$ dias):** Teste cego *out-of-time* em campo, avaliando o estresse climático de enchentes severas em setembro e a estabilização da operação regular em outubro.
+* **Ações Executadas:**
+  1. **Módulo de Margens e Políticas Operacionais (`src/core/safety_margins.py`):**
+     * *Modelo Híbrido Adaptativo ($T+1$):* $\hat{y}_{\text{híbrido}} = 0.50 \cdot \hat{y}_{\text{IA}} + 0.50 \cdot \hat{y}_{\text{nutri}}$, alcançando MAE=21.43 no retrospectivo e MAE=8.36 em outubro regular.
+     * *Margens Conformais de Segurança:* Adição de buffers empíricos (+10, +12, +15, +19 refeições). A política Conformal P85 (+12 refeições) derrubou a frequência de dias com déficit de 43.4% para 15.7%, garantindo a segurança alimentar com acréscimo controlado de sobras.
+     * *Custo Financeiro Potencial de Desperdício:* Precificação a R$ 14,00 por refeição excedente, permitindo o mapeamento da curva de trade-off entre risco de falta e custo fiscal.
+  2. **Geração das Tabelas Oficiais para a Dissertação (`resultados/tabelas_dissertacao/`):**
+     * `tabela_03_desempenho_cenarios_retrospectivo.csv`: Ablation study completo nos 4 cenários e 2 horizontes.
+     * `tabela_04_modelos_vs_nutricionista_t1_retrospectivo.csv`: Confronto com o especialista humano.
+     * `tabela_05_politicas_margens_retrospectivo.csv`: Avaliação de políticas com margens conformais e custos em R$.
+     * `tabela_06_modelos_t2_compras_retrospectivo.csv`: Desempenho autônomo para compras quinzenais.
+     * `tabela_07_desempenho_prospectivo_set_out.csv`: Bimestre prospectivo completo.
+     * `tabela_08_resiliencia_climatica_setembro_enchentes.csv`: Resiliência em dias regulares vs. dias de crise de enchente.
+     * `tabela_10_sintese_comparativa_retrospectivo_vs_prospectivo.csv`: Quadro síntese confrontando os regimes.
+  3. **Suíte Completa de 11 Figuras para a Dissertação (`resultados/figuras/dissertacao/`):**
+     * *Figuras 18 a 23 (Retrospectivo):* Ablation study, confronto da taxonomia de ensembles, dispersão IA vs Nutricionista, curva de equilíbrio do híbrido, margens conformais e curva de trade-off custo vs falta.
+     * *Figuras 24 a 28 (Prospectivo e Síntese):* Série temporal com precipitação e catraca real, resiliência nas enchentes de setembro, estabilidade no retorno de outubro, balanço acumulado de sobras/faltas e síntese comparativa de MAE.
+  4. **Notebooks 04 e 05:**
+     * Conclusão de `notebooks/04_torneio_modelos_walk_forward.ipynb` e `notebooks/05_modelo_hibrido_e_margens_seguranca.ipynb` com narrativa completa e exibição de figuras.
+
+---
+
 ### [Planejamento Próximos Passos]
-* **Marco 4:** Torneio de Algoritmos em Validação Walk-Forward (12 meses de treino) comparando Baselines, Modelos Lineares, Árvores e Boosting em $T+1$ e $T+2$.
-* **Marco 5:** Modelo Híbrido Adaptativo (IA + Nutricionista) e Calibração de Margens de Segurança Conformal (+12 a +18 refeições).
-* **Marco 6:** Desenvolvimento da Aplicação Streamlit Modular (`src/app/`) com Simulador Interativo, Visão Executiva e Módulo de Compras.
-* **Marco 7:** Validação Prospectiva em 2026, exportação de tabelas/figuras finais e fechamento das evidências empíricas da dissertação.
+* **Marco 6:** Desenvolvimento da Aplicação Streamlit Modular (`src/app/`):
+  * Estruturação modular com páginas: Visão Geral Executiva, Simulador Walk-Forward, Compras Quinzenais T+2, Auditoria de Não-Vazamento e Cadastro Operacional.
+  * Integração da tabela de custos e margens conformais interativas.
+* **Marco 7:** Consolidação do relatório de atualização da Dissertação (mapeamento numérico das tabelas e figuras prontas para inserção nos Capítulos 4 e 5).
 

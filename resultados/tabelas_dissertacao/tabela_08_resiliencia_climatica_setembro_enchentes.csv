@@ -1,0 +1,9 @@
+﻿Recorte;Metodo;n_dias;MAE;RMSE;R2;WAPE_pct;Sobra_Total_ref;Deficit_Total_ref;Dias_com_Deficit;Taxa_Deficit_pct;Dias_com_Sobra;Taxa_Sobra_pct;Saldo_Operacional_ref;Custo_Potencial_Sobras_RS
+Dias Regulares (N=11);Nutricionista Institucional;11;11.0;15.37;0.24;5.36;110;11;3 (27.3%);27.3;8 (72.7%);72.7;99;1540.0
+Dias Regulares (N=11);IA Pura (ExtraTrees);11;26.05;28.15;-1.551;12.7;6;279;10 (90.9%);90.9;1 (9.1%);9.1;-273;84.0
+Dias Regulares (N=11);Modelo Híbrido 50/50;11;11.27;13.26;0.434;5.5;18;106;8 (72.7%);72.7;2 (18.2%);18.2;-88;252.0
+Dias Regulares (N=11);Híbrido +12 (Conformal P85);11;8.91;11.31;0.589;4.34;71;27;4 (36.4%);36.4;7 (63.6%);63.6;44;994.0
+Dias de Enchente (N=5);Nutricionista Institucional;5;136.6;151.93;-9.282;188.67;683;0;0 (0.0%);0.0;5 (100.0%);100.0;683;9562.0
+Dias de Enchente (N=5);IA Pura (ExtraTrees);5;106.04;120.29;-5.445;146.46;530;0;0 (0.0%);0.0;5 (100.0%);100.0;530;7420.0
+Dias de Enchente (N=5);Modelo Híbrido 50/50;5;121.2;135.82;-7.217;167.4;606;0;0 (0.0%);0.0;5 (100.0%);100.0;606;8484.0
+Dias de Enchente (N=5);Híbrido +12 (Conformal P85);5;133.2;146.63;-8.577;183.98;666;0;0 (0.0%);0.0;5 (100.0%);100.0;666;9324.0

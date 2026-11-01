@@ -46,3 +46,7 @@ venv.bak/
 .DS_Store
 Thumbs.db
 
+# ML artifacts temporários
+catboost_info/
+
+

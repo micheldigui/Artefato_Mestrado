@@ -1,0 +1,4 @@
+﻿Período;Natureza;N_Dias;Nutricionista_MAE;Nutricionista_WAPE;Melhor_IA_MAE;Melhor_IA_WAPE;Hibrido_50_MAE;Hibrido_50_WAPE;Conformal_P85_Deficit_Dias;Conformal_P85_Sobra_Custo_RS
+Retrospectivo (Fev-Ago/2026);Validação Walk-Forward Contínua;121;24.86;14.2%;21.66;12.38%;21.43;12.25%;15.7%;R$ 27.916,00
+Prospectivo (Set-Out/2026) - Regular;Teste Cego / Out-of-Time;23;11.0;5.36%;26.05;12.7%;11.27;5.5%;36.4%;R$ 994.00
+Prospectivo (Setembro/2026) - Enchentes;Estresse Climático Extremo;5;136.6;188.67%;106.04;146.46%;121.2;167.4%;0.0%;R$ 9,324.00

@@ -1,0 +1,14 @@
+﻿Modelo / Origem;Familia;Cenario;n_dias;MAE;RMSE;R2;WAPE_pct;Sobra_Total_ref;Deficit_Total_ref;Dias_com_Deficit;Taxa_Deficit_pct;Dias_com_Sobra;Taxa_Sobra_pct;Saldo_Operacional_ref;Custo_Potencial_Sobras_RS
+Nutricionista Institucional (Humano);Especialista Humano;Referência Operacional;121;24.12;34.47;0.467;14.24;2255;663;48 (39.7%);39.7;70 (57.9%);57.9;1592;31570.0
+Lasso;Linear;Cenario_4_Com_Nutricionista;121;21.14;28.48;0.636;12.49;1280;1278;71 (58.7%);58.7;48 (39.7%);39.7;2;17920.0
+ElasticNet;Linear;Cenario_4_Com_Nutricionista;121;21.26;28.25;0.642;12.55;1152;1420;77 (63.6%);63.6;41 (33.9%);33.9;-268;16128.0
+Ensemble_Voting_Heterogeneo;Voting;Cenario_4_Com_Nutricionista;121;22.22;30.23;0.59;13.13;1256;1433;71 (58.7%);58.7;45 (37.2%);37.2;-177;17584.0
+Ridge;Linear;Cenario_4_Com_Nutricionista;121;22.31;28.47;0.637;13.18;1014;1686;80 (66.1%);66.1;40 (33.1%);33.1;-672;14196.0
+Ensemble_Bagging_ExtraTrees;Bagging;Cenario_4_Com_Nutricionista;121;23.86;33.06;0.51;14.09;1431;1456;65 (53.7%);53.7;56 (46.3%);46.3;-25;20034.0
+Regressao_Linear;Linear;Cenario_4_Com_Nutricionista;121;24.02;30.53;0.582;14.19;1019;1888;81 (66.9%);66.9;38 (31.4%);31.4;-869;14266.0
+Ensemble_Voting_Heterogeneo;Voting;Cenario_2_Com_Cardapio;121;25.26;34.14;0.478;14.92;1357;1699;72 (59.5%);59.5;46 (38.0%);38.0;-342;18998.0
+Ensemble_Bagging_ExtraTrees;Bagging;Cenario_2_Com_Cardapio;121;25.47;35.32;0.441;15.04;1422;1660;69 (57.0%);57.0;51 (42.1%);42.1;-238;19908.0
+Ridge;Linear;Cenario_2_Com_Cardapio;121;25.55;32.96;0.513;15.09;1149;1943;75 (62.0%);62.0;43 (35.5%);35.5;-794;16086.0
+ElasticNet;Linear;Cenario_2_Com_Cardapio;121;25.78;33.68;0.491;15.23;1234;1885;73 (60.3%);60.3;45 (37.2%);37.2;-651;17276.0
+Lasso;Linear;Cenario_2_Com_Cardapio;121;25.81;33.88;0.486;15.24;1294;1829;72 (59.5%);59.5;48 (39.7%);39.7;-535;18116.0
+Ensemble_Boosting_Gradient;Boosting;Cenario_2_Com_Cardapio;121;26.47;36.19;0.413;15.64;1526;1677;66 (54.5%);54.5;54 (44.6%);44.6;-151;21364.0
