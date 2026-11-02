@@ -183,6 +183,10 @@ def obter_proximos_dias_uteis(origem_dt=None, num_dias=10, dias_frente=None):
     Garante que feriados (como 02/11) permaneçam na grade da sua respectiva semana com previsão 0,
     sem deslocar dias para semanas posteriores.
     """
+    if isinstance(origem_dt, (int, float)):
+        num_dias = int(origem_dt)
+        origem_dt = None
+
     from datetime import date
     if dias_frente is not None:
         num_dias = dias_frente

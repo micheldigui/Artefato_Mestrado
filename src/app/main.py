@@ -1453,25 +1453,39 @@ if pagina_ativa == "Dashboard":
                 df_bal_melt["tipo_label"] = df_bal_melt["tipo"].map({"sobra_ref": "Sobras Potenciais (Excedente)", "falta_ref": "Déficit Potencial (Falta no Agendamento)"})
                 df_bal_melt["ano_str"] = df_bal_melt["ano"].astype(str)
                 
-                fig_bal = px.bar(
-                    df_bal_melt,
-                    x="ano_str",
-                    y="volume",
-                    color="tipo_label",
-                    barmode="group",
-                    text="volume",
-                    color_discrete_map={"Sobras Potenciais (Excedente)": "#f59e0b", "Déficit Potencial (Falta no Agendamento)": "#ef4444"},
-                    labels={"ano_str": "Ano Letivo", "volume": "Refeições Acumuladas", "tipo_label": "Tipo de Saldo"}
-                )
-                fig_bal.update_traces(texttemplate='%{text:,.0f} ref', textposition='outside', cliponaxis=False)
+                anos_list = [str(a) for a in df_bal_ano["ano"]]
+                sobras_list = [float(v) for v in df_bal_ano["sobra_ref"]]
+                faltas_list = [float(v) for v in df_bal_ano["falta_ref"]]
+                max_vol = max(max(sobras_list or [0]), max(faltas_list or [0]))
+
+                fig_bal = go.Figure()
+                fig_bal.add_trace(go.Bar(
+                    x=anos_list,
+                    y=sobras_list,
+                    name="Sobras Potenciais (Excedente)",
+                    text=[f"{v:,.0f} ref" for v in sobras_list],
+                    textposition="outside",
+                    marker_color="#f59e0b",
+                    cliponaxis=False
+                ))
+                fig_bal.add_trace(go.Bar(
+                    x=anos_list,
+                    y=faltas_list,
+                    name="Déficit Potencial (Falta no Agendamento)",
+                    text=[f"{v:,.0f} ref" for v in faltas_list],
+                    textposition="outside",
+                    marker_color="#ef4444",
+                    cliponaxis=False
+                ))
                 fig_bal.update_layout(
+                    barmode="group",
                     height=280,
                     margin=dict(l=10, r=10, t=30, b=10),
                     legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, title=None),
                     plot_bgcolor="rgba(0,0,0,0)",
                     paper_bgcolor="rgba(0,0,0,0)",
                     xaxis_title=None,
-                    yaxis_title="Volume Acumulado"
+                    yaxis=dict(title="Volume Acumulado", range=[0, max_vol * 1.18 if max_vol > 0 else 100])
                 )
                 st.plotly_chart(fig_bal, use_container_width=True)
                 
@@ -1554,22 +1568,25 @@ if pagina_ativa == "Dashboard":
                 st.markdown("##### Média de Presença por Dia da Semana")
                 st.caption("Comportamento médio da frequência dos estudantes de segunda a sexta-feira.")
                 
-                fig_d = px.bar(
-                    df_d,
-                    x="dia_nome",
-                    y="consumo_medio",
-                    text="consumo_medio",
-                    category_orders={"dia_nome": ["Segunda", "Terça", "Quarta", "Quinta", "Sexta"]},
-                    labels={"dia_nome": "Dia da Semana", "consumo_medio": "Média de Refeições Servidas"},
-                    color_discrete_sequence=["#008744"],
-                    hover_data={"count": True, "consumo_medio": True}
-                )
-                fig_d.update_traces(texttemplate='%{text:.1f} ref', textposition='outside', cliponaxis=False)
+                ordem_dias = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta"]
+                df_d_sorted = df_d.set_index("dia_nome").reindex(ordem_dias).dropna(subset=["consumo_medio"]).reset_index()
+                max_yd = float(df_d_sorted["consumo_medio"].max()) if not df_d_sorted.empty else 160.0
+                
+                fig_d = go.Figure(go.Bar(
+                    x=df_d_sorted["dia_nome"].tolist(),
+                    y=df_d_sorted["consumo_medio"].tolist(),
+                    text=[f"{v:.1f} ref" for v in df_d_sorted["consumo_medio"]],
+                    textposition="outside",
+                    marker_color="#008744",
+                    customdata=df_d_sorted["count"].tolist(),
+                    hovertemplate="<b>Dia: %{x}</b><br>Média: %{y:.1f} refeições<br>Amostra: %{customdata} datas<extra></extra>",
+                    cliponaxis=False
+                ))
                 fig_d.update_layout(
                     height=280,
                     margin=dict(l=10, r=10, t=25, b=10),
-                    xaxis_title=None,
-                    yaxis_title="Média de Refeições",
+                    xaxis=dict(title=None, categoryorder="array", categoryarray=ordem_dias),
+                    yaxis=dict(title="Média de Refeições Servidas", range=[0, max_yd * 1.18]),
                     plot_bgcolor="rgba(0,0,0,0)",
                     paper_bgcolor="rgba(0,0,0,0)"
                 )
@@ -1581,24 +1598,28 @@ if pagina_ativa == "Dashboard":
                 
                 df_dash_mes = df_dash.copy()
                 df_dash_mes["mes_nome"] = df_dash_mes["mes"].map(meses_map)
-                df_m = df_dash_mes.groupby(["mes", "mes_nome"])["consumo"].mean().reset_index().sort_values("mes")
-                df_m["consumo_medio"] = df_m["consumo"].round(1)
+                df_m = df_dash_mes.groupby(["mes", "mes_nome"])["consumo"].agg(["count", "mean"]).reset_index().sort_values("mes")
+                df_m["consumo_medio"] = df_m["mean"].round(1)
+                df_m_clean = df_m.dropna(subset=["consumo_medio"]).copy()
                 
-                fig_m = px.bar(
-                    df_m,
-                    x="mes_nome",
-                    y="consumo_medio",
-                    text="consumo_medio",
-                    category_orders={"mes_nome": list(meses_map.values())},
-                    labels={"mes_nome": "Mês", "consumo_medio": "Média de Refeições"},
-                    color_discrete_sequence=["#0284c7"]
-                )
-                fig_m.update_traces(texttemplate='%{text:.1f} ref', textposition='outside', cliponaxis=False)
+                ordem_meses = [m for m in meses_map.values() if m in df_m_clean["mes_nome"].values]
+                max_ym = float(df_m_clean["consumo_medio"].max()) if not df_m_clean.empty else 160.0
+                
+                fig_m = go.Figure(go.Bar(
+                    x=df_m_clean["mes_nome"].tolist(),
+                    y=df_m_clean["consumo_medio"].tolist(),
+                    text=[f"{v:.1f} ref" for v in df_m_clean["consumo_medio"]],
+                    textposition="outside",
+                    marker_color="#0284c7",
+                    customdata=df_m_clean["count"].tolist(),
+                    hovertemplate="<b>Mês: %{x}</b><br>Média: %{y:.1f} refeições<br>Amostra: %{customdata} datas<extra></extra>",
+                    cliponaxis=False
+                ))
                 fig_m.update_layout(
                     height=280,
                     margin=dict(l=10, r=10, t=25, b=10),
-                    xaxis_title=None,
-                    yaxis_title="Média de Refeições",
+                    xaxis=dict(title=None, categoryorder="array", categoryarray=ordem_meses),
+                    yaxis=dict(title="Média de Refeições Servidas", range=[0, max_ym * 1.18]),
                     plot_bgcolor="rgba(0,0,0,0)",
                     paper_bgcolor="rgba(0,0,0,0)"
                 )
@@ -1713,21 +1734,22 @@ if pagina_ativa == "Dashboard":
                 st.markdown("##### Média de Alunos por Tipo de Carne")
                 st.caption(f"Comparativo visual de consumo médio no período: **{rotulo_filtro}**.")
                 
-                fig_p = px.bar(
-                    df_p_agg,
-                    x="proteina_nome",
-                    y="consumo_medio",
-                    text="consumo_medio",
-                    labels={"proteina_nome": "Tipo de Proteína", "consumo_medio": "Média de Refeições Servidas"},
-                    color_discrete_sequence=["#008744"],
-                    hover_data={"count": True, "consumo_medio": True}
-                )
-                fig_p.update_traces(texttemplate='%{text:.1f} ref', textposition='outside', cliponaxis=False)
+                max_yp = float(df_p_agg["consumo_medio"].max()) if not df_p_agg.empty else 160.0
+                fig_p = go.Figure(go.Bar(
+                    x=df_p_agg["proteina_nome"].tolist(),
+                    y=df_p_agg["consumo_medio"].tolist(),
+                    text=[f"{v:.1f} ref" for v in df_p_agg["consumo_medio"]],
+                    textposition="outside",
+                    marker_color="#008744",
+                    customdata=df_p_agg["count"].tolist(),
+                    hovertemplate="<b>Carne: %{x}</b><br>Média: %{y:.1f} ref<br>Amostra: %{customdata} datas<extra></extra>",
+                    cliponaxis=False
+                ))
                 fig_p.update_layout(
                     height=280,
                     margin=dict(l=10, r=10, t=25, b=10),
-                    xaxis_title=None,
-                    yaxis_title="Média de Refeições Servidas",
+                    xaxis=dict(title=None),
+                    yaxis=dict(title="Média de Refeições Servidas", range=[0, max_yp * 1.18]),
                     plot_bgcolor="rgba(0,0,0,0)",
                     paper_bgcolor="rgba(0,0,0,0)"
                 )
@@ -1813,21 +1835,22 @@ if pagina_ativa == "Dashboard":
                 df_prep_agg["consumo_medio"] = df_prep_agg["mean"].round(1)
                 df_prep_agg = df_prep_agg.sort_values(by="consumo_medio", ascending=False)
                 
-                fig_prep = px.bar(
-                    df_prep_agg,
-                    x="preparo_nome",
-                    y="consumo_medio",
-                    text="consumo_medio",
-                    labels={"preparo_nome": "Técnica Culinária", "consumo_medio": "Média de Refeições"},
-                    color_discrete_sequence=["#0284c7"],
-                    hover_data={"count": True, "consumo_medio": True}
-                )
-                fig_prep.update_traces(texttemplate='%{text:.1f} ref', textposition='outside', cliponaxis=False)
+                max_yprep = float(df_prep_agg["consumo_medio"].max()) if not df_prep_agg.empty else 160.0
+                fig_prep = go.Figure(go.Bar(
+                    x=df_prep_agg["preparo_nome"].tolist(),
+                    y=df_prep_agg["consumo_medio"].tolist(),
+                    text=[f"{v:.1f} ref" for v in df_prep_agg["consumo_medio"]],
+                    textposition="outside",
+                    marker_color="#0284c7",
+                    customdata=df_prep_agg["count"].tolist(),
+                    hovertemplate="<b>Técnica: %{x}</b><br>Média: %{y:.1f} ref<br>Amostra: %{customdata} datas<extra></extra>",
+                    cliponaxis=False
+                ))
                 fig_prep.update_layout(
                     height=280,
                     margin=dict(l=10, r=10, t=25, b=10),
-                    xaxis_title=None,
-                    yaxis_title="Média de Refeições",
+                    xaxis=dict(title=None),
+                    yaxis=dict(title="Média de Refeições Servidas", range=[0, max_yprep * 1.18]),
                     plot_bgcolor="rgba(0,0,0,0)",
                     paper_bgcolor="rgba(0,0,0,0)"
                 )
@@ -1901,22 +1924,22 @@ if pagina_ativa == "Dashboard":
                 st.markdown("##### Consumo Médio por Intensidade de Chuva")
                 st.caption("Queda acentuada de alunos nos dias de tempestade (>15 mm).")
                 
-                fig_ch = px.bar(
-                    df_ch_agg,
-                    x="faixa_chuva",
-                    y="consumo_medio",
-                    text="consumo_medio",
-                    category_orders={"faixa_chuva": ordem_chuva},
-                    labels={"faixa_chuva": "Condição Climática", "consumo_medio": "Média de Refeições Servidas"},
-                    color_discrete_sequence=["#0284c7"],
-                    hover_data={"count": True, "consumo_medio": True}
-                )
-                fig_ch.update_traces(texttemplate='%{text:.1f} ref', textposition='outside', cliponaxis=False)
+                max_ych = float(df_ch_agg["consumo_medio"].max()) if not df_ch_agg.empty else 160.0
+                fig_ch = go.Figure(go.Bar(
+                    x=df_ch_agg["faixa_chuva"].tolist(),
+                    y=df_ch_agg["consumo_medio"].tolist(),
+                    text=[f"{v:.1f} ref" for v in df_ch_agg["consumo_medio"]],
+                    textposition="outside",
+                    marker_color="#0284c7",
+                    customdata=df_ch_agg["count"].tolist(),
+                    hovertemplate="<b>Chuva: %{x}</b><br>Média: %{y:.1f} ref<br>Amostra: %{customdata} datas<extra></extra>",
+                    cliponaxis=False
+                ))
                 fig_ch.update_layout(
                     height=280,
                     margin=dict(l=10, r=10, t=25, b=10),
-                    xaxis_title=None,
-                    yaxis_title="Média de Refeições Servidas",
+                    xaxis=dict(title=None, categoryorder="array", categoryarray=ordem_chuva),
+                    yaxis=dict(title="Média de Refeições Servidas", range=[0, max_ych * 1.18]),
                     plot_bgcolor="rgba(0,0,0,0)",
                     paper_bgcolor="rgba(0,0,0,0)"
                 )
@@ -1979,22 +2002,22 @@ if pagina_ativa == "Dashboard":
                 df_t_agg = df_ch.groupby("faixa_temp", observed=False)["consumo"].agg(["count", "mean"]).reindex(ordem_temp).dropna().reset_index()
                 df_t_agg["consumo_medio"] = df_t_agg["mean"].round(1)
                 
-                fig_temp = px.bar(
-                    df_t_agg,
-                    x="faixa_temp",
-                    y="consumo_medio",
-                    text="consumo_medio",
-                    category_orders={"faixa_temp": ordem_temp},
-                    labels={"faixa_temp": "Faixa Térmica", "consumo_medio": "Média de Refeições"},
-                    color_discrete_sequence=["#f59e0b"],
-                    hover_data={"count": True, "consumo_medio": True}
-                )
-                fig_temp.update_traces(texttemplate='%{text:.1f} ref', textposition='outside', cliponaxis=False)
+                max_yt = float(df_t_agg["consumo_medio"].max()) if not df_t_agg.empty else 160.0
+                fig_temp = go.Figure(go.Bar(
+                    x=df_t_agg["faixa_temp"].tolist(),
+                    y=df_t_agg["consumo_medio"].tolist(),
+                    text=[f"{v:.1f} ref" for v in df_t_agg["consumo_medio"]],
+                    textposition="outside",
+                    marker_color="#f59e0b",
+                    customdata=df_t_agg["count"].tolist(),
+                    hovertemplate="<b>Temperatura: %{x}</b><br>Média: %{y:.1f} ref<br>Amostra: %{customdata} datas<extra></extra>",
+                    cliponaxis=False
+                ))
                 fig_temp.update_layout(
                     height=280,
                     margin=dict(l=10, r=10, t=25, b=10),
-                    xaxis_title=None,
-                    yaxis_title="Média de Refeições",
+                    xaxis=dict(title=None, categoryorder="array", categoryarray=ordem_temp),
+                    yaxis=dict(title="Média de Refeições Servidas", range=[0, max_yt * 1.18]),
                     plot_bgcolor="rgba(0,0,0,0)",
                     paper_bgcolor="rgba(0,0,0,0)"
                 )
@@ -2071,22 +2094,23 @@ if pagina_ativa == "Dashboard":
                 st.markdown("##### Tornado Chart: Correlação dos Atributos com o Consumo Real")
                 st.caption("Verde indica correlação positiva (aumenta o consumo); Vermelho indica efeito redutor.")
                 
-                fig_tor = px.bar(
-                    df_tor,
-                    x="Correlacao",
-                    y="Atributo",
+                fig_tor = go.Figure(go.Bar(
+                    x=df_tor["Correlacao"].tolist(),
+                    y=df_tor["Atributo"].tolist(),
                     orientation="h",
-                    text="Correlacao",
-                    color="Cor",
-                    color_discrete_map="identity",
-                    labels={"Correlacao": "Correlação Linear de Pearson (r)", "Atributo": ""},
-                    hover_data={"Tipo": True, "Impacto": True, "Correlacao": True, "Cor": False}
-                )
-                fig_tor.update_traces(texttemplate='%{text:+.3f}', textposition='outside', cliponaxis=False)
+                    text=[f"{v:+.3f}" for v in df_tor["Correlacao"]],
+                    textposition="outside",
+                    marker_color=df_tor["Cor"].tolist(),
+                    customdata=df_tor[["Tipo", "Impacto"]].values.tolist(),
+                    hovertemplate="<b>%{y}</b><br>Correlação (r): %{x:+.3f}<br>Dimensão: %{customdata[0]}<br>Classificação: %{customdata[1]}<extra></extra>",
+                    cliponaxis=False
+                ))
                 fig_tor.update_layout(
                     height=420,
                     margin=dict(l=10, r=10, t=10, b=10),
                     showlegend=False,
+                    xaxis=dict(title="Correlação Linear de Pearson (r)", range=[-0.50, 0.80]),
+                    yaxis=dict(title=None),
                     plot_bgcolor="rgba(0,0,0,0)",
                     paper_bgcolor="rgba(0,0,0,0)"
                 )
@@ -2109,21 +2133,22 @@ if pagina_ativa == "Dashboard":
                 })
                 df_autocorr["Cor"] = df_autocorr["Destaque"].apply(lambda d: "#008744" if "Pico" in d else "#94a3b8")
                 
-                fig_auto = px.bar(
-                    df_autocorr,
-                    x="Lag",
-                    y="Autocorrelacao",
-                    text="Autocorrelacao",
-                    color="Cor",
-                    color_discrete_map="identity",
-                    labels={"Lag": "Defasagem Temporal (Dias Úteis)", "Autocorrelacao": "Autocorrelação"},
-                    hover_data={"Destaque": True, "Autocorrelacao": True, "Cor": False}
-                )
-                fig_auto.update_traces(texttemplate='%{text:.2f}', textposition='outside', cliponaxis=False)
+                fig_auto = go.Figure(go.Bar(
+                    x=[f"Lag {l}" for l in df_autocorr["Lag"]],
+                    y=df_autocorr["Autocorrelacao"].tolist(),
+                    text=[f"{v:.2f}" for v in df_autocorr["Autocorrelacao"]],
+                    textposition="outside",
+                    marker_color=df_autocorr["Cor"].tolist(),
+                    customdata=df_autocorr["Destaque"].tolist(),
+                    hovertemplate="<b>%{x}</b><br>Autocorrelação: %{y:.2f}<br>%{customdata}<extra></extra>",
+                    cliponaxis=False
+                ))
                 fig_auto.update_layout(
                     height=420,
                     margin=dict(l=10, r=10, t=10, b=10),
                     showlegend=False,
+                    xaxis=dict(title="Defasagem Temporal (Dias Úteis)"),
+                    yaxis=dict(title="Autocorrelação", range=[min(df_autocorr["Autocorrelacao"])*1.2 if min(df_autocorr["Autocorrelacao"]) < 0 else 0, max(df_autocorr["Autocorrelacao"])*1.25]),
                     plot_bgcolor="rgba(0,0,0,0)",
                     paper_bgcolor="rgba(0,0,0,0)"
                 )
