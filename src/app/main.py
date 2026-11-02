@@ -1222,11 +1222,10 @@ if pagina_ativa == "Dashboard":
             col_r1, col_r2 = st.columns(2)
             with col_r1:
                 st.markdown("##### Desvios Diários (Onde Sobrou e Onde Faltou Comida)")
-                st.caption("Barras acima de zero indicam sobras; barras abaixo indicam déficit em relação à presença real.")
+                st.caption(f"Barras acima de zero indicam sobras; barras abaixo indicam déficit no período: **{rotulo_filtro}**.")
                 
-                slice_tail = df_reg.tail(120) if len(df_reg) > 120 else df_reg
                 fig_desv = px.bar(
-                    slice_tail,
+                    df_reg,
                     x="data_dt",
                     y="desvio",
                     color="tipo_desvio",
@@ -1247,18 +1246,18 @@ if pagina_ativa == "Dashboard":
                 
             with col_r2:
                 st.markdown("##### Linha do Tempo: Demanda Real vs. Quantitativo Planejado")
-                st.caption("Consumo real (linha verde) comparado ao quantitativo previsto/reservas (linha tracejada âmbar).")
+                st.caption(f"Consumo real (linha verde) vs quantitativo planejado/reservas (linha âmbar) no período: **{rotulo_filtro}**.")
                 
                 fig_time = go.Figure()
                 fig_time.add_trace(go.Scatter(
-                    x=slice_tail["data_dt"], y=slice_tail["consumo"],
-                    mode="lines+markers", name="Consumo Real (Catraca)",
+                    x=df_reg["data_dt"], y=df_reg["consumo"],
+                    mode="lines+markers", name="Consumo Real",
                     line=dict(color="#10b981", width=2.5),
                     marker=dict(size=5, color="#10b981"),
                     hovertemplate="Data: %{x|%d/%m/%Y}<br>Consumo Real: %{y:.0f} ref<extra></extra>"
                 ))
                 fig_time.add_trace(go.Scatter(
-                    x=slice_tail["data_dt"], y=slice_tail["referencia_planejada"],
+                    x=df_reg["data_dt"], y=df_reg["referencia_planejada"],
                     mode="lines", name="Planejado / Reserva",
                     line=dict(color="#f59e0b", width=2, dash="dash"),
                     hovertemplate="Data: %{x|%d/%m/%Y}<br>Planejado: %{y:.0f} ref<extra></extra>"
@@ -1333,7 +1332,7 @@ if pagina_ativa == "Dashboard":
                     y="consumo",
                     color="regime_nome",
                     color_discrete_map={"Nutricionista (2026)": "#008744", "Reservas Alunos (2023-2025)": "#0284c7"},
-                    labels={"planejado": "Planejado / Reserva (ref)", "consumo": "Consumo Real na Catraca (ref)", "regime_nome": "Regime"},
+                    labels={"planejado": "Planejado / Reserva (ref)", "consumo": "Consumo Real (ref)", "regime_nome": "Regime"},
                     hover_data={"data": True, "consumo": True, "planejado": True}
                 )
                 max_v = max(df_disp["planejado"].max(), df_disp["consumo"].max()) if len(df_disp) > 0 else 300

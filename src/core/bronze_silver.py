@@ -53,7 +53,7 @@ def processar_calendario() -> pd.DataFrame:
 
 
 def processar_consumo() -> pd.DataFrame:
-    """Processa a série histórica de refeições consumidas na catraca."""
+    """Processa a série histórica de refeições consumidas no refeitório."""
     con = ler_pasta_bronze("consumo")
     con["data"] = pd.to_datetime(con["data"], dayfirst=True)
     con = con[con["consumo"].notna()]

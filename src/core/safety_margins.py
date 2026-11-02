@@ -611,7 +611,7 @@ def gerar_figuras_dissertacao(df_completo: pd.DataFrame) -> None:
     ax1.plot(lims, lims, "k--", alpha=0.6)
     ax1.set_xlim(lims)
     ax1.set_ylim(lims)
-    ax1.set_xlabel("Consumo Real (Catraca)")
+    ax1.set_xlabel("Consumo Real")
     ax1.set_ylabel("Estimativa Humana")
     ax1.set_title("Nutricionista Institucional (MAE=24.86)")
     ax1.legend(frameon=True)
@@ -620,7 +620,7 @@ def gerar_figuras_dissertacao(df_completo: pd.DataFrame) -> None:
     ax2.plot(lims, lims, "k--", alpha=0.6)
     ax2.set_xlim(lims)
     ax2.set_ylim(lims)
-    ax2.set_xlabel("Consumo Real (Catraca)")
+    ax2.set_xlabel("Consumo Real")
     ax2.set_ylabel("Predição Machine Learning")
     ax2.set_title("IA Pura: ExtraTrees (MAE=23.54)")
     ax2.legend(frameon=True)
@@ -699,7 +699,7 @@ def gerar_figuras_dissertacao(df_completo: pd.DataFrame) -> None:
     y_hib = np.floor(0.5 * y_ia + 0.5 * y_nutri + 0.5)
     chuva = g_ia_prosp["chuva_mm"].values
     
-    ax1.plot(datas, y_real, "ko-", linewidth=2, markersize=5, label="Consumo Real na Catraca")
+    ax1.plot(datas, y_real, "ko-", linewidth=2, markersize=5, label="Consumo Real")
     ax1.plot(datas, y_nutri, "r--", linewidth=1.8, label="Nutricionista Institucional")
     ax1.plot(datas, y_ia, "b-.", linewidth=1.8, label="IA Pura (ExtraTrees)")
     ax1.plot(datas, y_hib, "g-", linewidth=2, label="Modelo Híbrido 50/50")
@@ -758,7 +758,7 @@ def gerar_figuras_dissertacao(df_completo: pd.DataFrame) -> None:
     y_ia_out = df_out["previsao"].values
     y_hib_out = np.floor(0.5 * y_ia_out + 0.5 * y_nut_out + 0.5)
     
-    ax.plot(datas_out, y_real_out, "ko-", linewidth=2, markersize=5, label="Consumo Real na Catraca")
+    ax.plot(datas_out, y_real_out, "ko-", linewidth=2, markersize=5, label="Consumo Real")
     ax.plot(datas_out, y_nut_out, "r--", linewidth=1.8, label="Nutricionista Institucional")
     ax.plot(datas_out, y_ia_out, "b-.", linewidth=1.8, label="IA Pura (ExtraTrees)")
     ax.plot(datas_out, y_hib_out, "g-", linewidth=2, label="Modelo Híbrido 50/50")

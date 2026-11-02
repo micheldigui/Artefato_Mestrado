@@ -290,7 +290,7 @@ def construir_gold(fato: pd.DataFrame) -> Dict[str, pd.DataFrame]:
 DICIONARIO_ATRIBUTOS = [
     ("identificador", "origem", "t1 e t2", "Sexta-feira de emissão da previsão (marco de corte temporal)"),
     ("identificador", "data", "t1 e t2", "Dia previsto para o almoço no refeitório"),
-    ("alvo", "consumo", "resultado", "Refeições efetivamente consumidas na catraca"),
+    ("alvo", "consumo", "resultado", "Refeições efetivamente consumidas no refeitório"),
     ("alvo", "alvo_relativo", "resultado", "Consumo normalizado em relação ao nível basal (consumo / nivel_base)"),
     ("controle", "tratamento", "resultado", "normal, previsivel_calendario, alto_mantido, isolado_sem_explicacao, etc."),
     ("controle", "usar_no_treino", "resultado", "Booleano indicando elegibilidade para treinamento supervisionado"),
