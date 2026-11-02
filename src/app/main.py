@@ -60,6 +60,7 @@ try:
         MODELOS_SIMULADOR,
         opcoes_simulador,
         rotulo_simulador,
+        descricao_margem,
         MARGENS_INFO,
         FERIADOS_FIXOS_BR,
         CENARIO_PADRAO,
@@ -101,6 +102,7 @@ except ImportError:
         MODELOS_SIMULADOR,
         opcoes_simulador,
         rotulo_simulador,
+        descricao_margem,
         MARGENS_INFO,
         FERIADOS_FIXOS_BR,
         CENARIO_PADRAO,
@@ -1225,8 +1227,8 @@ if pagina_ativa == "Dashboard":
         ),
         como_foi_feito_ciencia=(
             "**Estudo de mais de 650 dias letivos reais auditados na instituição (2023 a 2026).** "
-            "A pesquisa comprovou que a presença discente não é mero acaso: ela responde à proteína servida, "
-            "ao dia da semana, à proximidade do fim do semestre e às tempestades severas."
+            "A análise mostra que o consumo varia com o dia da semana, a proximidade do fim do semestre, o cardápio e a chuva. "
+            "São associações observadas nos dados, não causas comprovadas."
         ),
         como_usar_passos=(
             "1. **Use os filtros interativos** para recortar anos ou dias da semana desejados.\n"
@@ -1387,10 +1389,10 @@ if pagina_ativa == "Dashboard":
             st.write(
                 "**Entenda a história do nosso refeitório:** "
                 "Entre 2023 e 2025, a quantidade de comida dependia do preenchimento voluntário de reservas feitas pelos discentes no sistema acadêmico. "
-                "Muitos esqueciam de registrar: em **65,6% dos dias faltavam refeições previstas no agendamento**, gerando risco de estudantes ficarem sem almoço. "
+                "Em **63,8% dos dias, o consumo ficou acima das reservas**, o que representa déficit potencial. "
                 "Já em 2026, a nutrição passou a estipular um quantitativo técnico com folga preventiva, "
-                "o que reduziu a taxa de falta para 39,6%, mas gerou sobras de segurança em dias de baixa presença. "
-                "O artefato preditivo une os dois mundos para equilibrar perfeitamente a balança."
+                "o que reduziu para 37,8% os dias com déficit potencial, mas aumentou a sobra potencial. "
+                "O artefato apresenta previsões e alternativas de margem para apoiar essa decisão."
             )
             
             df_reg = df_dash.copy()
@@ -1567,9 +1569,8 @@ if pagina_ativa == "Dashboard":
             st.markdown("#### 📅 O Ritmo Semanal, Mensal e Desmobilização de Fim de Semestre")
             st.write(
                 "**A dinâmica temporal das aulas:** "
-                "A presença discente não é uniforme: a segunda-feira começa com alta frequência, "
-                "a quarta-feira atinge o pico com disciplinas técnicas de laboratório integradas e a sexta-feira à tarde sofre uma evasão natural de cerca de 20%. "
-                "Além disso, a pesquisa descobriu que **nos últimos 3 dias úteis do semestre, o consumo desaba 56,1%** devido ao encerramento antecipado de avaliações."
+                "O consumo não é uniforme ao longo da semana, e o padrão muda entre os anos: de 2023 a 2025, a quarta-feira teve a maior média (143,0 refeições) e a quinta-feira, a menor (122,4); em 2026, a maior média foi a da segunda-feira (210,0). "
+                "Além disso, **nos últimos 3 dias do semestre, o consumo fica 56,2% abaixo da rotina**."
             )
             
             def map_dia_pt_local(val):
@@ -1684,7 +1685,7 @@ if pagina_ativa == "Dashboard":
                 
             with col_d4:
                 st.markdown("##### Curva Semanal Comparativa por Ano (2023–2026)")
-                st.caption("Comprova que a queda de sexta-feira é estrutural e se repetiu em todos os 4 anos analisados.")
+                st.caption("Mostra que o padrão semanal muda de um ano para outro.")
                 
                 df_sem_ano = df_dash.copy() if len(df_dash["ano"].unique()) > 1 else df_validos_geral.copy()
                 df_sem_ano["dia_nome"] = df_sem_ano["dia_da_semana"].apply(map_dia_pt_local)
@@ -1928,9 +1929,8 @@ if pagina_ativa == "Dashboard":
             st.markdown("#### 🌧️ Efeito Meteorológico: Chuva e Temperatura")
             st.write(
                 "**A sensibilidade climática da comunidade acadêmica:** "
-                "Ao contrário de escritórios convencionais, estudantes transitam a pé pelo campus. "
-                "Em dias secos, a presença atinge seu pico regular; chuvas fortes e tempestades (>15 mm) provocam queda imediata de presença, "
-                "exigindo recuo preventivo na produção para evitar desperdício de panelas cheias."
+                "De 2023 a 2025, a média foi de 139,1 refeições em dias sem chuva e de 112,6 em dias com chuva forte (acima de 20 mm). "
+                "A associação geral é fraca (correlação de −0,13), e a previsão de clima pouco alterou os resultados dos modelos."
             )
             
             df_ch = df_dash.dropna(subset=["precipitation_sum"]).copy()
@@ -2198,12 +2198,12 @@ if pagina_ativa == "Dashboard":
 elif pagina_ativa == "Previsões":
     st.markdown('<div class="story-badge">ETAPA 2 DE 6 • ORDEM DE PREPARO SEMANAL (t+1)</div>', unsafe_allow_html=True)
     st.markdown("### Previsões e Ordem de Preparo Semanal")
-    st.markdown('<p class="story-subtitle">Toda sexta-feira: consulte a recomendação diária calibrada para a próxima semana útil, embasada no modelo híbrido, que combina o ExtraTrees e o quantitativo informado pela nutricionista.</p>', unsafe_allow_html=True)
+    st.markdown('<p class="story-subtitle">Toda sexta-feira: consulte a recomendação diária calibrada para a próxima semana útil, embasada no modelo híbrido, que combina o Ridge e o quantitativo informado pela nutricionista.</p>', unsafe_allow_html=True)
     
     renderizar_painel_explicativo(
         objetivo_rotina=(
-            "**Saber a quantidade exata de refeições a cozinhar em cada dia da próxima semana útil.** "
-            "Elimina o 'chutômetro' da equipe de cozinha e protege contra a falta de comida nos horários de pico."
+            "**Consultar a quantidade sugerida para cada dia da próxima semana útil.** "
+            "A previsão e a margem aparecem separadas, e a decisão final é da nutricionista e da gestora."
         ),
         como_foi_feito_ciencia=(
             "**Combinação Inteligente (Modelo Híbrido 50/50 + Margem de Segurança):** "
@@ -2391,7 +2391,7 @@ elif pagina_ativa == "Previsões":
                      Quer simular datas específicas, modelos ou cenários alternativos?
                 </div>
                 <div style="font-size: 13px; color: var(--text-muted); line-height: 1.5;">
-                    O <b>Simulador de Cenários</b> possui uma página dedicada na barra superior! Nele você pode escolher qualquer data (passada ou futura), comparar os modelos da pesquisa (Modelo Híbrido, ExtraTrees e planejamento manual), ajustar margens de proteção alimentar e verificar a influência de cardápio e clima em tempo real.
+                    O <b>Simulador de Cenários</b> possui uma página dedicada na barra superior! Nele você pode escolher qualquer data (passada ou futura), comparar os modelos da pesquisa (Modelo Híbrido, os 20 algoritmos e planejamento manual), ajustar margens de proteção alimentar e verificar a influência de cardápio e clima em tempo real.
                 </div>
             </div>
             <div>
@@ -2506,7 +2506,7 @@ elif pagina_ativa == "Simulador de Cenários":
                 )
             else:
                 margem_custom_val = 0.0
-                st.caption(f"{MARGENS_INFO[margem_sel]['descricao']} (Cobertura: {MARGENS_INFO[margem_sel]['cobertura']})")
+                st.caption(descricao_margem(obj_chave, margem_sel))
 
     with col_valid:
         with st.container(border=True):
@@ -2873,7 +2873,7 @@ f"**Modelo de Longo Prazo ({NOME_COMPRAS}, escolhido em Fev-Ago/2026):** "
 elif pagina_ativa == "Cadastrar Dados":
     st.markdown('<div class="story-badge">ETAPA 5 DE 6 • ALIMENTAÇÃO CONTÍNUA & ROTINA</div>', unsafe_allow_html=True)
     st.markdown("### Lançamento e Atualização de Informações do Refeitório")
-    st.markdown('<p class="story-subtitle">Diariamente após o almoço: gaste 1 minuto para lançar o consumo verificado e manter os modelos sempre afinados com a realidade discente.</p>', unsafe_allow_html=True)
+    st.markdown('<p class="story-subtitle">Diariamente após o almoço: gaste 1 minuto para lançar o consumo verificado e manter o histórico atualizado.</p>', unsafe_allow_html=True)
     
     renderizar_painel_explicativo(
         objetivo_rotina=(
@@ -3298,7 +3298,7 @@ elif pagina_ativa == "Guia Prático":
              - Baixe a planilha em CSV e envie a grade para a equipe de cozinha terceirizada.
            
         2. **Diariamente (Registro Rápido após as 14h):**
-           - Acesse a página **'✍️ Cadastrar Dados'** e digite a quantidade real de refeições servidas no almoço. Isso mantém o modelo sempre afinado.
+           - Acesse a página **'✍️ Cadastrar Dados'** e digite a quantidade real de refeições servidas no almoço. Isso mantém o histórico atualizado; o modelo segue congelado.
            
         3. **Quinzenalmente (Planejamento de Compras de Secos t+2):**
            - Acesse a página **'📦 Compras & Suprimentos'** para ver a projeção das próximas duas semanas e dimensionar pedidos de estoque.
@@ -3308,11 +3308,11 @@ elif pagina_ativa == "Guia Prático":
         #### 🌦️ Como Agir em Dias Especiais
         
         * **Dias de Tempestade / Alagamentos:**
-          O sistema reduz automaticamente a folga de segurança para evitar que a comida fique sobrando no balcão de distribuição.
+          Nos cenários com clima (3 e 4), a margem é zerada quando a chuva prevista chega a 15 mm. No cenário padrão, isso não acontece. Nenhum método antecipou as enchentes de setembro de 2026, então avalie a situação antes de decidir.
         * **Sextas-feiras:**
-          O modelo já calcula a queda natural de ~20% no comparecimento discente no turno vespertino.
+          Em 2026, a média das sextas foi de 150,7 refeições, abaixo das segundas (210,0). O padrão semanal muda entre os anos.
         * **Cardápio com Carne Bovina:**
-          O modelo ajusta a quantidade para cima para garantir que nenhum estudante fique sem comer no dia de maior procura.
+          O efeito do cardápio é pequeno nos resultados da pesquisa. Revise a sugestão com base na experiência da equipe.
         """)
         
     with tab_dissertacao:

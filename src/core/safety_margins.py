@@ -474,7 +474,7 @@ def processar_prospectivo(df_completo: pd.DataFrame, margens: Dict[str, Dict[str
     df_sintese = pd.DataFrame([
         linha_sintese("Retrospectivo (Fev-Ago/2026)", "Walk-forward com retreino semanal", y_retro, ref_retro["plano_nutricionista"].values, ia_retro, hib_retro),
         *[
-            linha_sintese(f"Prospectivo (Set-Out/2026) - {recorte}", "Modelo congelado em 31/08/2026, métricas reprocessadas em 01/11/2026",
+            linha_sintese(f"Prospectivo (Set-Out/2026) - {recorte}", "Modelo congelado em 31/08/2026, métricas reprocessadas em 02/11/2026",
                           sub["consumo"].values, sub["plano_nutricionista"].values, sub["previsao_ia"].values, sub["previsao_hibrido"].values)
             for recorte, sub in recortes
         ]

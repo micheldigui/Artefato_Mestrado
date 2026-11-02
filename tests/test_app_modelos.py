@@ -60,6 +60,12 @@ def test_margem_do_simulador_e_a_do_proprio_algoritmo():
     assert p.margem_do_modelo(p.MARGEM_PADRAO, "hibrido", 0.0, "t1", 2, None) == p.calcular_margem(p.MARGEM_PADRAO, "hibrido")
 
 
+def test_descricao_da_margem_nas_compras_usa_a_margem_do_extratrees():
+    assert "+36 ref" in p.descricao_margem("compras", p.MARGEM_PADRAO)
+    assert "+21 ref" in p.descricao_margem("consumo", p.MARGEM_PADRAO)
+    assert "Cobertura" in p.descricao_margem("compras", p.MARGEM_SEM)
+
+
 def test_compras_usam_o_modelo_congelado_escolhido():
     ref = carregar_selecao()["t2"]
     gold = p.carregar_gold("t2")

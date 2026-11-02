@@ -124,6 +124,7 @@ def rotulo_simulador(objetivo, modelo):
 
 
 _MARGENS = carregar_margens()
+ALERTA_SEXTA = "Sexta-feira: em 2026, média de 150,7 refeições, abaixo das segundas (210,0)."
 MARGEM_PADRAO = "Margem P85 (Padrão da Pesquisa)"
 MARGEM_SEM = "Predição Pura (Sem Margem)"
 MARGENS_INFO = {
@@ -167,6 +168,14 @@ def calcular_margem(tipo_margem, politica, margem_custom=0.0):
     if quantil is None or politica == "manual":
         return 0.0
     return _MARGENS[quantil][politica]
+
+
+def descricao_margem(objetivo, tipo_margem):
+    """Descreve a margem do objetivo escolhido no simulador."""
+    info = MARGENS_INFO[tipo_margem]
+    if objetivo == "compras" and info["quantil"]:
+        return f"Nas compras: +{calcular_margem(tipo_margem, 't2'):.0f} ref no {NOME_COMPRAS}. Os demais algoritmos usam a própria margem."
+    return f"{info['descricao']} (Cobertura: {info['cobertura']})"
 
 
 def margem_do_modelo(tipo_margem, politica, margem_custom, horizonte, cenario, algoritmo):
@@ -429,7 +438,7 @@ def executar_pipeline_previsao(
             alertas.append(f"{evento_rotulo} — Refeitório Fechado (0 refeições)")
         else:
             if dia_sem_num == 4:
-                alertas.append("Sexta-feira: retração sistemática de comparecimento (~20% menor)")
+                alertas.append(ALERTA_SEXTA)
             if usar_clima and precip >= 15.0:
                 alertas.append(f"Alerta tempestade ({precip:.1f} mm): modo contenção ativado (margem zerada para evitar desperdício)")
             elif precip >= 15.0:
@@ -678,9 +687,9 @@ def simular_previsao_data(
     elif linha.empty:
         alertas.append("Data fora do escopo do modelo (sábado letivo ou histórico insuficiente).")
     elif dia_sem == 4:
-        alertas.append("Sexta-feira: retração histórica de ~20% no comparecimento à tarde.")
+        alertas.append(ALERTA_SEXTA)
     elif dia_sem == 2:
-        alertas.append("Quarta-feira: dia de maior comparecimento discente (pico semanal com aulas técnicas).")
+        alertas.append("Quarta-feira: maior média de 2023 a 2025 (143,0 refeições); em 2026, a maior média foi a da segunda-feira.")
 
     if usar_clima and chuva_utilizada >= 15.0:
         alertas.append(f"Alerta Tempestade ({chuva_utilizada:.1f} mm): Margem aditiva zerada para evitar desperdício de insumos.")

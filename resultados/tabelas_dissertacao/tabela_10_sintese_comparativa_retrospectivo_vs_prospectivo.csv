@@ -1,5 +1,5 @@
 ﻿Período;Natureza;N_Dias;Nutricionista_MAE;Nutricionista_WAPE;IA_MAE;IA_WAPE;Hibrido_50_MAE;Hibrido_50_WAPE;Margem_P85_Deficit_Dias;Margem_P85_Sobra_Custo_RS
 Retrospectivo (Fev-Ago/2026);Walk-forward com retreino semanal;123;26.21;15.67%;27.48;16.43%;22.08;13.2%;13.8%;R$ 48,706.00
-Prospectivo (Set-Out/2026) - Todos os dias (N=33);Modelo congelado em 31/08/2026, métricas reprocessadas em 01/11/2026;33;39.48;21.9%;34.79;19.3%;34.61;19.2%;15.2%;R$ 17,108.00
-Prospectivo (Set-Out/2026) - Sem evento registrado (N=28);Modelo congelado em 31/08/2026, métricas reprocessadas em 01/11/2026;28;22.14;11.1%;22.71;11.38%;19.39;9.72%;17.9%;R$ 7,252.00
-Prospectivo (Set-Out/2026) - Dias de enchente (N=5);Modelo congelado em 31/08/2026, métricas reprocessadas em 01/11/2026;5;136.6;188.67%;102.4;141.44%;119.8;165.47%;0.0%;R$ 9,856.00
+Prospectivo (Set-Out/2026) - Todos os dias (N=33);Modelo congelado em 31/08/2026, métricas reprocessadas em 02/11/2026;33;39.48;21.9%;34.79;19.3%;34.61;19.2%;15.2%;R$ 17,108.00
+Prospectivo (Set-Out/2026) - Sem evento registrado (N=28);Modelo congelado em 31/08/2026, métricas reprocessadas em 02/11/2026;28;22.14;11.1%;22.71;11.38%;19.39;9.72%;17.9%;R$ 7,252.00
+Prospectivo (Set-Out/2026) - Dias de enchente (N=5);Modelo congelado em 31/08/2026, métricas reprocessadas em 02/11/2026;5;136.6;188.67%;102.4;141.44%;119.8;165.47%;0.0%;R$ 9,856.00
