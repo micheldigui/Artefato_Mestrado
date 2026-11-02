@@ -1770,15 +1770,34 @@ if pagina_ativa == "Dashboard":
                     df_ch,
                     x="precipitation_sum",
                     y="consumo",
-                    trendline="ols",
                     labels={"precipitation_sum": "Volume de Chuva (mm)", "consumo": "Refeições Servidas"},
                     color_discrete_sequence=["#0284c7"],
                     hover_data={"data": True, "consumo": True, "precipitation_sum": True}
                 )
                 fig_ch_scatter.update_traces(marker=dict(size=6, opacity=0.6))
+                
+                # Linha de tendência linear calculada diretamente com NumPy (elimina dependência de statsmodels)
+                if len(df_ch) > 1:
+                    x_v = df_ch["precipitation_sum"].values.astype(float)
+                    y_v = df_ch["consumo"].values.astype(float)
+                    mask = ~np.isnan(x_v) & ~np.isnan(y_v)
+                    if mask.sum() > 1:
+                        slope, intercept = np.polyfit(x_v[mask], y_v[mask], 1)
+                        x_line = np.array([float(x_v[mask].min()), float(x_v[mask].max())])
+                        y_line = slope * x_line + intercept
+                        fig_ch_scatter.add_trace(go.Scatter(
+                            x=x_line,
+                            y=y_line,
+                            mode="lines",
+                            name="Tendência Linear",
+                            line=dict(color="#ef4444", width=2.5),
+                            hoverinfo="skip"
+                        ))
+                
                 fig_ch_scatter.update_layout(
                     height=280,
                     margin=dict(l=10, r=10, t=25, b=10),
+                    showlegend=False,
                     plot_bgcolor="rgba(0,0,0,0)",
                     paper_bgcolor="rgba(0,0,0,0)"
                 )
