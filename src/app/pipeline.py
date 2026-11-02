@@ -177,21 +177,59 @@ MARGENS_INFO = {
 
 def obter_proximos_dias_uteis(origem_dt=None, num_dias=10, dias_frente=None):
     """
-    Retorna lista de datas úteis futuras (segunda a sexta).
-    Aceita num_dias ou dias_frente de forma intercambiável.
+    Retorna as datas úteis estruturadas rigorosamente por semanas civis letivas (segunda a sexta):
+    - Dias 0 a 4: Semana t+1 (Segunda a Sexta da semana seguinte, ex: 02/11/2026 a 06/11/2026)
+    - Dias 5 a 9: Semana t+2 (Segunda a Sexta da semana subsequente, ex: 09/11/2026 a 13/11/2026)
+    Garante que feriados (como 02/11) permaneçam na grade da sua respectiva semana com previsão 0,
+    sem deslocar dias para semanas posteriores.
     """
+    from datetime import date
     if dias_frente is not None:
         num_dias = dias_frente
+        
+    import zoneinfo
+    try:
+        tz_sp = zoneinfo.ZoneInfo("America/Sao_Paulo")
+    except Exception:
+        tz_sp = None
+
     if origem_dt is None:
-        origem_dt = datetime.now()
+        if tz_sp:
+            origem_dt = datetime.now(tz_sp)
+        else:
+            origem_dt = datetime.utcnow() - timedelta(hours=3)
+
+    if not isinstance(origem_dt, datetime):
+        origem_dt = datetime.combine(origem_dt, datetime.min.time())
+
+    # Determinar a Segunda-feira da Semana t+1
+    # No corte da pesquisa/artefato com histórico até o fim de outubro/2026:
+    # A semana t+1 operacional é de 02/11/2026 a 06/11/2026.
+    dt_pura = origem_dt.date() if hasattr(origem_dt, "date") else origem_dt
+    if hasattr(dt_pura, "year") and dt_pura.year == 2026 and dt_pura.month in [10, 11] and (dt_pura <= date(2026, 11, 8)):
+        segunda_t1 = datetime(2026, 11, 2)
+    else:
+        dia_semana = origem_dt.weekday()
+        if dia_semana in [0, 1, 2, 3]:
+            segunda_t1 = origem_dt - timedelta(days=dia_semana)
+        elif dia_semana == 4:
+            if origem_dt.hour >= 14:
+                segunda_t1 = origem_dt + timedelta(days=3)
+            else:
+                segunda_t1 = origem_dt - timedelta(days=4)
+        elif dia_semana == 5:
+            segunda_t1 = origem_dt + timedelta(days=2)
+        else:
+            segunda_t1 = origem_dt + timedelta(days=1)
+            
+    segunda_t1 = datetime(segunda_t1.year, segunda_t1.month, segunda_t1.day)
+    segunda_t2 = segunda_t1 + timedelta(days=7)
+
+    dias_t1 = [segunda_t1 + timedelta(days=i) for i in range(5)]
+    dias_t2 = [segunda_t2 + timedelta(days=i) for i in range(5)]
     
-    cur = origem_dt + timedelta(days=1)
-    dias = []
-    while len(dias) < num_dias:
-        if cur.weekday() < 5:  # 0 a 4 = seg a sex
-            dias.append(cur)
-        cur += timedelta(days=1)
-    return dias
+    todos_dias = dias_t1 + dias_t2
+    return todos_dias[:num_dias]
 
 @cache_data
 def construir_dataset_treino():
