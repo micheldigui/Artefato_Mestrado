@@ -46,8 +46,20 @@ def carregar_fato_diaria_completa():
             df_fato["data_dt"] = pd.to_datetime(df_fato["data_iso"])
             df_fato["data"] = df_fato["data_dt"]
             
-        if "status_legal" in df_fato.columns and "is_dia_letivo" not in df_fato.columns:
-            df_fato["is_dia_letivo"] = df_fato["status_legal"].astype(str).str.lower().str.contains("letivo|aula")
+        # Classificação estrita de Dia Letivo vs Não Letivo / Feriado / Recesso / Fim de Semana
+        status_str = df_fato["status_legal"].astype(str).str.lower().str.strip() if "status_legal" in df_fato.columns else pd.Series("", index=df_fato.index)
+        evento_str = df_fato["evento_tipo"].astype(str).str.lower().str.strip() if "evento_tipo" in df_fato.columns else pd.Series("", index=df_fato.index)
+        
+        nao_letivo_mask = (
+            (status_str == "nao_letivo") |
+            evento_str.isin(["feriado", "recesso", "ferias", "sem_atividade_letiva", "final_de_semana", "ponto_facultativo", "sem_atendimento"])
+        )
+        df_fato["is_dia_letivo"] = ~nao_letivo_mask
+        
+        if "data_dt" in df_fato.columns:
+            is_fds = df_fato["data_dt"].dt.dayofweek.isin([5, 6])
+            is_sabado_letivo = evento_str == "sabado_letivo"
+            df_fato.loc[is_fds & (~is_sabado_letivo), "is_dia_letivo"] = False
             
         mapa_dias_nomes = {
             "seg": "segunda-feira", "ter": "terça-feira", "qua": "quarta-feira",

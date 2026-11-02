@@ -54,6 +54,7 @@ try:
         CENARIOS_DICT,
         MODELOS_RANKING,
         MARGENS_INFO,
+        FERIADOS_FIXOS_BR,
         obter_modelos_treinados,
         simular_previsao_data
     )
@@ -84,6 +85,7 @@ except ImportError:
         CENARIOS_DICT,
         MODELOS_RANKING,
         MARGENS_INFO,
+        FERIADOS_FIXOS_BR,
         obter_modelos_treinados,
         simular_previsao_data
     )
@@ -1023,6 +1025,163 @@ def renderizar_painel_explicativo(objetivo_rotina, como_foi_feito_ciencia, como_
                     unsafe_allow_html=True
                 )
                 st.markdown(como_usar_passos)
+
+def renderizar_painel_transparencia_dados(df_horizonte, titulo_painel="Diagnóstico de Insumos e Transparência dos Dados", horizonte_rotulo="Semana t+1"):
+    """
+    Renderiza um painel visual e auditável que expõe com 100% de transparência
+    se as previsões estão utilizando dados reais inseridos (cardápio, clima, nutrição, calendário)
+    ou valores de contingência/padrão definidos pelo artefato (fallbacks seguros).
+    """
+    if df_horizonte.empty:
+        return
+
+    is_let = df_horizonte["is_dia_letivo"] == True
+    total_letivos = sum(is_let)
+    dias_fechados = df_horizonte[~is_let]
+
+    # 1. Cardápio
+    alerta_cardapio = None
+    if total_letivos == 0:
+        b_card = "⛔ Não Aplicável"
+        cor_card = "#64748b"
+        bg_card = "#f1f5f9"
+        sub_card = "Sem atendimento previsto no período."
+    else:
+        df_let = df_horizonte[is_let]
+        status_card_vals = df_let["status_cardapio"].tolist()
+        num_oficiais = sum(1 for s in status_card_vals if "Oficial" in str(s))
+        if num_oficiais == total_letivos:
+            b_card = "✅ Oficial Cadastrado (100%)"
+            cor_card = "#166534"
+            bg_card = "#dcfce7"
+            sub_card = "Cardápio inserido na íntegra. Calibração por atratividade ativa."
+        elif num_oficiais == 0:
+            b_card = "⚠️ Padrão Neutro (Não Cadastrado)"
+            cor_card = "#92400e"
+            bg_card = "#fef3c7"
+            sub_card = "Cardápio não inserido. Aplicando perfil neutro (Frango Assado)."
+            alerta_cardapio = (
+                f"⚠️ **Atenção Operacional — Cardápio Não Cadastrado ({horizonte_rotulo}):** "
+                "O cardápio oficial para este período ainda não foi inserido na base pelo refeitório. "
+                "Os modelos preditivos estão aplicando o perfil escolar regular neutro (Frango Assado). "
+                "As previsões continuam estatisticamente sólidas e estáveis baseadas na inércia de consumo recente e no ritmo semanal letivo. "
+                "Para refinar o preparo com a atratividade do prato real, realize o cadastro na aba **✍️ Cadastrar Dados**."
+            )
+        else:
+            b_card = f"⚠️ Parcial ({num_oficiais}/{total_letivos} dias)"
+            cor_card = "#92400e"
+            bg_card = "#fef3c7"
+            sub_card = f"{num_oficiais} dias com prato oficial e {total_letivos - num_oficiais} com perfil neutro."
+            alerta_cardapio = f"⚠️ **Cardápio Parcialmente Cadastrado ({horizonte_rotulo}):** Alguns dias estão sem prato oficial lançado, aplicando perfil escolar regular neutro."
+
+    # 2. Clima (Open-Meteo API vs Fallback)
+    alerta_clima = None
+    status_clima_vals = df_horizonte["status_clima"].astype(str).tolist()
+    tem_satelite = any("Satélite" in s or "Open-Meteo" in s for s in status_clima_vals)
+    tem_desativado = all("Desativado" in s for s in status_clima_vals)
+
+    if tem_desativado:
+        b_clima = "⚪ Desativado no Cenário"
+        cor_clima = "#64748b"
+        bg_clima = "#f1f5f9"
+        sub_clima = "Cenário experimental selecionado não utiliza variáveis meteorológicas."
+    elif tem_satelite:
+        b_clima = "✅ Satélite Open-Meteo Ativo"
+        cor_clima = "#0369a1"
+        bg_clima = "#e0f2fe"
+        sub_clima = "Previsão do tempo obtida em tempo real via satélite para o campus."
+    else:
+        b_clima = "ℹ️ Mediana Histórica (Offline)"
+        cor_clima = "#475569"
+        bg_clima = "#f1f5f9"
+        sub_clima = "API meteorológica indisponível. Artefato utilizando a mediana histórica segura."
+        alerta_clima = (
+            "ℹ️ **Conexão Meteorológica em Contingência Segura:** "
+            "A API pública Open-Meteo está temporariamente inacessível ou offline. "
+            "O sistema ativou automaticamente a mediana histórica dos últimos anos para o campus (24,0°C e 2,5 mm), "
+            "mantendo a operação preditiva 100% contínua e sem falhas."
+        )
+
+    # 3. Calendário Acadêmico
+    alerta_cal = None
+    if len(dias_fechados) > 0:
+        desc_fechados = ", ".join([f"{r['data'][:5]} ({r['evento_tipo']})" for _, r in dias_fechados.iterrows()])
+        b_cal = f"⛔ {len(dias_fechados)} Dia Não Letivo / Fechado"
+        cor_cal = "#991b1b"
+        bg_cal = "#fee2e2"
+        sub_cal = f"Refeitório fechado em: {desc_fechados}."
+        alerta_cal = (
+            f"⛔ **Feriado / Recesso Identificado no Período:** {desc_fechados}. "
+            "O refeitório estará fechado e a previsão foi fixada em estritamente 0 refeições. "
+            "Este dia foi automaticamente excluído da média diária operacional."
+        )
+    else:
+        b_cal = f"✅ {total_letivos} Dias Letivos Regulares"
+        cor_cal = "#166534"
+        bg_cal = "#dcfce7"
+        sub_cal = "Sem feriados ou recessos: refeitório em pleno funcionamento."
+
+    # 4. Nutrição / Planejamento Humano
+    if total_letivos == 0:
+        b_nutri = "⛔ Não Aplicável"
+        cor_nutri = "#64748b"
+        bg_nutri = "#f1f5f9"
+        sub_nutri = "Sem atendimento previsto."
+    else:
+        num_nutri = sum(df_horizonte[is_let]["estimativa_nutri"].notna())
+        if num_nutri > 0:
+            b_nutri = f"✅ Informada pela Gestão ({num_nutri}/{total_letivos})"
+            cor_nutri = "#166534"
+            bg_nutri = "#dcfce7"
+            sub_nutri = "Quantitativo humano integrado ao modelo híbrido."
+        else:
+            b_nutri = "ℹ️ Não Informada (IA Autônoma)"
+            cor_nutri = "#475569"
+            bg_nutri = "#f1f5f9"
+            sub_nutri = "Meta diária não lançada. Modelos operando de forma 100% autônoma."
+
+    # Renderização do Painel HTML
+    painel_html = f'''
+    <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 14px 16px; margin-bottom: 16px; box-shadow: var(--shadow-sm);">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 8px;">
+            <div style="font-size: 14px; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 6px;">
+                <span>🔍</span> <span>{titulo_painel}</span>
+            </div>
+            <span style="font-size: 11px; font-weight: 600; color: var(--text-muted); background: #f1f5f9; padding: 2px 8px; border-radius: 4px;">Auditoria de Insumos & Proveniência</span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px;">
+            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px;">
+                <div style="font-size: 11.5px; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 6px;">🥗 Cardápio Escolar</div>
+                <div style="font-size: 11px; font-weight: 700; color: {cor_card}; background: {bg_card}; padding: 3px 8px; border-radius: 4px; display: inline-block; margin-bottom: 6px;">{b_card}</div>
+                <div style="font-size: 11px; color: #64748b; line-height: 1.35;">{sub_card}</div>
+            </div>
+            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px;">
+                <div style="font-size: 11.5px; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 6px;">🌦️ Meteorologia (Clima)</div>
+                <div style="font-size: 11px; font-weight: 700; color: {cor_clima}; background: {bg_clima}; padding: 3px 8px; border-radius: 4px; display: inline-block; margin-bottom: 6px;">{b_clima}</div>
+                <div style="font-size: 11px; color: #64748b; line-height: 1.35;">{sub_clima}</div>
+            </div>
+            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px;">
+                <div style="font-size: 11.5px; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 6px;">📅 Calendário Acadêmico</div>
+                <div style="font-size: 11px; font-weight: 700; color: {cor_cal}; background: {bg_cal}; padding: 3px 8px; border-radius: 4px; display: inline-block; margin-bottom: 6px;">{b_cal}</div>
+                <div style="font-size: 11px; color: #64748b; line-height: 1.35;">{sub_cal}</div>
+            </div>
+            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px;">
+                <div style="font-size: 11.5px; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 6px;">👩‍🍳 Meta da Nutrição</div>
+                <div style="font-size: 11px; font-weight: 700; color: {cor_nutri}; background: {bg_nutri}; padding: 3px 8px; border-radius: 4px; display: inline-block; margin-bottom: 6px;">{b_nutri}</div>
+                <div style="font-size: 11px; color: #64748b; line-height: 1.35;">{sub_nutri}</div>
+            </div>
+        </div>
+    </div>
+    '''
+    st.markdown(painel_html, unsafe_allow_html=True)
+
+    if alerta_cal:
+        st.info(alerta_cal)
+    if alerta_cardapio:
+        st.warning(alerta_cardapio)
+    if alerta_clima:
+        st.info(alerta_clima)
+
 
 # ==============================================================================
 # PÁGINA 1: DASHBOARD (SEÇÕES DINÂMICAS E FILTROS INTERATIVOS)
@@ -2026,7 +2185,33 @@ elif pagina_ativa == "Previsões":
     )
 
     if not df_t1.empty:
-                # CARTOES DIARIOS HORIZONTAIS DA SEMANA (GRADE DA COZINHA)
+        # PAINEL DE TRANSPARÊNCIA E PROVENIÊNCIA DE DADOS (SEMANA T+1)
+        renderizar_painel_transparencia_dados(
+            df_t1,
+            titulo_painel="Diagnóstico de Insumos e Transparência dos Dados — Semana t+1 (Ordem de Preparo)",
+            horizonte_rotulo="Semana t+1"
+        )
+
+        total_semana_t1 = int(df_t1["recomendacao_final"].sum())
+        df_letivos_t1 = df_t1[df_t1["is_dia_letivo"] == True]
+        media_dia_t1 = int(df_letivos_t1["recomendacao_final"].mean()) if not df_letivos_t1.empty else 0
+        dias_letivos_count = len(df_letivos_t1)
+        dias_nao_letivos_count = len(df_t1) - dias_letivos_count
+
+        # INDICADORES DA SEMANA T+1
+        c_kpi1, c_kpi2, c_kpi3, c_kpi4 = st.columns(4)
+        with c_kpi1:
+            st.metric("Volume Semanal de Preparo", f"{total_semana_t1:,} refeições".replace(",", "."))
+        with c_kpi2:
+            st.metric("Média Diária em Dias Letivos", f"{media_dia_t1} ref/dia", delta=f"{dias_letivos_count} dias operacionais")
+        with c_kpi3:
+            st.metric("Calendário Escolar", f"{dias_letivos_count} dias com atendimento", delta=f"{dias_nao_letivos_count} feriado/fechado" if dias_nao_letivos_count > 0 else "Semana 100% Letiva")
+        with c_kpi4:
+            margem_media = int(df_letivos_t1["margem_aplicada"].mean()) if not df_letivos_t1.empty else 0
+            st.metric("Margem Protetiva Embutida", f"+{margem_media} ref/dia", delta=f"Política: {margem_t1.split('(')[0].strip()}")
+
+        st.markdown("---")
+        # CARTOES DIARIOS HORIZONTAIS DA SEMANA (GRADE DA COZINHA)
         st.markdown("##### Sugestão de Preparo para os Próximos 5 Dias Úteis (Calendário Acadêmico)")
         
         cards_items = []
@@ -2038,18 +2223,27 @@ elif pagina_ativa == "Previsões":
             d_base = int(row_dia["pred_base_combinada"])
             d_marg = int(row_dia["margem_aplicada"])
             is_let = bool(row_dia.get("is_dia_letivo", True))
+            status_card = str(row_dia.get("status_cardapio", ""))
+            temp_dia = float(row_dia.get("temp_max_c", 25.0))
+            chuva_dia = float(row_dia.get("chuva_mm", 0.0))
             
             if not is_let:
                 card_html = (
-                    f'<div class="day-prod-card" style="opacity: 0.85; border-color: #cbd5e1; background: #f8fafc;">'
+                    f'<div class="day-prod-card" style="opacity: 0.9; border-top: 4px solid #94a3b8 !important; border-color: #cbd5e1 !important; background: #f8fafc;">'
                     f'<div class="day-prod-date">{d_nome} ({d_data[:5]})</div>'
                     f'<div class="day-prod-dish" style="color: #64748b; font-weight: 600;">{d_prato}</div>'
                     f'<div class="day-prod-number" style="color: #94a3b8;">0</div>'
-                    f'<div class="day-prod-badge" style="background: #e2e8f0; color: #475569; border: 1px solid #cbd5e1;">Feriado / Sem Atendimento</div>'
-                    f'<div class="day-prod-sub" style="color: #94a3b8;">Não Letivo • Calendário Acadêmico</div>'
+                    f'<div class="day-prod-badge" style="background: #fee2e2; color: #991b1b; border: 1px solid #fecaca;">⛔ Feriado / Fechado (0 ref)</div>'
+                    f'<div class="day-prod-sub" style="color: #64748b; margin-top: 4px;">Não Letivo • Refeitório Fechado</div>'
                     f'</div>'
                 )
             else:
+                card_menu_pill = (
+                    f'<span style="font-size: 10.5px; background: #dcfce7; color: #166534; padding: 2px 6px; border-radius: 4px; font-weight: 600;">✅ Cardápio Oficial</span>'
+                    if "Oficial" in status_card
+                    else f'<span style="font-size: 10.5px; background: #fef3c7; color: #92400e; padding: 2px 6px; border-radius: 4px; font-weight: 600;">⚠️ Cardápio Estimado (Neutro)</span>'
+                )
+                clima_tag = f'<div style="font-size: 11px; color: #64748b; margin-top: 4px;">🌦️ {temp_dia:.1f}°C | {chuva_dia:.1f} mm</div>'
                 card_html = (
                     f'<div class="day-prod-card">'
                     f'<div class="day-prod-date">{d_nome} ({d_data[:5]})</div>'
@@ -2057,6 +2251,8 @@ elif pagina_ativa == "Previsões":
                     f'<div class="day-prod-number">{d_ordem}</div>'
                     f'<div class="day-prod-badge">Sugestão de Preparo</div>'
                     f'<div class="day-prod-sub">Base: {d_base} | Margem: +{d_marg}</div>'
+                    f'<div style="margin-top: 8px;">{card_menu_pill}</div>'
+                    f'{clima_tag}'
                     f'</div>'
                 )
             cards_items.append(card_html)
@@ -2069,15 +2265,24 @@ elif pagina_ativa == "Previsões":
         df_exibir = pd.DataFrame()
         df_exibir["Data"] = df_t1["data"]
         df_exibir["Dia"] = df_t1["dia_semana"]
+        df_exibir["Calendário"] = df_t1.apply(
+            lambda r: f"⛔ {r['evento_tipo']}" if not r.get("is_dia_letivo", True) else "✅ Letivo Regular",
+            axis=1
+        )
         df_exibir["Prato Principal"] = df_t1["prato_principal"]
-        df_exibir["Proteína"] = df_t1.apply(lambda r: "—" if not r.get("is_dia_letivo", True) else str(r["proteina_tipo"]).title(), axis=1)
+        df_exibir["Status Cardápio"] = df_t1["status_cardapio"]
+        df_exibir["Fonte Clima"] = df_t1["status_clima"]
+        df_exibir["Previsão do Tempo"] = df_t1.apply(
+            lambda r: f"{r['temp_max_c']:.1f}°C / {r['chuva_mm']:.1f} mm",
+            axis=1
+        )
         
         def formatar_nutri_t1(row):
             if not row.get("is_dia_letivo", True):
                 return "Não se aplica (Feriado)"
             val = row.get("estimativa_nutri")
             if pd.isna(val) or val is None or val == 0:
-                return "A definir"
+                return "A definir (Autônomo)"
             return f"{int(round(val))} ref"
             
         df_exibir["Quantitativo Nutrição (Meta)"] = df_t1.apply(formatar_nutri_t1, axis=1)
@@ -2263,9 +2468,18 @@ elif pagina_ativa == "Simulador de Cenários":
             if not row_fato.empty:
                 is_letivo_sim = bool(row_fato.iloc[0].get("is_dia_letivo", True))
                 evento_sim = str(row_fato.iloc[0].get("evento_tipo", "Letivo Regular"))
+                status_leg = str(row_fato.iloc[0].get("status_legal", "")).lower().strip()
+                if status_leg == "nao_letivo" or evento_sim.lower() in ["feriado", "recesso", "ferias", "sem_atividade_letiva", "final_de_semana", "ponto_facultativo"]:
+                    is_letivo_sim = False
+            elif data_sim.weekday() >= 5:
+                is_letivo_sim = False
+                evento_sim = "final_de_semana"
             
+            chave_sim = data_iso_str[5:]
+            nome_fer = FERIADOS_FIXOS_BR.get(chave_sim)
             if not is_letivo_sim:
-                st.info(f"**Data Não Letiva no Calendário Acadêmico:** {data_sim.strftime('%d/%m/%Y')} está classificada como **{evento_sim.replace('_', ' ').title()}**. O restaurante não opera refeições regulares nesta data (sugestão = 0 refeições).")
+                rotulo_fechado = f"Feriado Nacional ({nome_fer})" if nome_fer else evento_sim.replace('_', ' ').title()
+                st.error(f"⛔ **Data Não Letiva no Calendário Acadêmico:** {data_sim.strftime('%d/%m/%Y')} está classificada como **{rotulo_fechado}**. O restaurante não opera refeições regulares nesta data (sugestão = 0 refeições).")
             
             cen_cfg = CENARIOS_DICT[cenario_sel]
             usar_cardapio = cen_cfg["usar_cardapio"]
@@ -2421,17 +2635,15 @@ elif pagina_ativa == "Simulador de Cenários":
                 delta=f"{delta_ref:+d} vs média regular (180)"
             )
     with c_kpi2:
-        st.metric(
-            "Previsão Bruta (IA)",
-            f"{resultado_sim['pred_ia']} ref",
-            delta="Sem margem extra"
-        )
+        if not resultado_sim["is_dia_letivo"]:
+            st.metric("Previsão Bruta (IA)", "0 ref", delta="Não aplicável (Fechado)", delta_color="off")
+        else:
+            st.metric("Previsão Bruta (IA)", f"{resultado_sim['pred_ia']} ref", delta="Sem margem extra")
     with c_kpi3:
-        st.metric(
-            "Margem de Segurança",
-            f"+{int(round(resultado_sim['margem_val']))} ref",
-            delta=f"Política: {margem_sel.split('(')[0].strip()}"
-        )
+        if not resultado_sim["is_dia_letivo"]:
+            st.metric("Margem de Segurança", "+0 ref", delta="Não aplicável (Fechado)", delta_color="off")
+        else:
+            st.metric("Margem de Segurança", f"+{int(round(resultado_sim['margem_val']))} ref", delta=f"Política: {margem_sel.split('(')[0].strip()}")
     with c_kpi4:
         st.metric(
             "Histórico Walk-Forward",
@@ -2567,16 +2779,29 @@ elif pagina_ativa == "Compras & Suprimentos":
     )
     
     if not df_t2.empty:
+        # PAINEL DE TRANSPARÊNCIA E PROVENIÊNCIA DE DADOS (SEMANA T+2)
+        renderizar_painel_transparencia_dados(
+            df_t2,
+            titulo_painel="Diagnóstico de Insumos e Transparência dos Dados — Semana t+2 (10 a 14 dias)",
+            horizonte_rotulo="Semana t+2"
+        )
+
         total_semana_t2 = int(df_t2["recomendacao_final"].sum())
-        media_dia_t2 = int(df_t2["recomendacao_final"].mean())
+        df_letivos_t2 = df_t2[df_t2["is_dia_letivo"] == True]
+        media_dia_t2 = int(df_letivos_t2["recomendacao_final"].mean()) if not df_letivos_t2.empty else 0
+        dias_letivos_t2_count = len(df_letivos_t2)
+        dias_fechados_t2_count = len(df_t2) - dias_letivos_t2_count
         
-        c_tot1, c_tot2, c_tot3 = st.columns(3)
+        c_tot1, c_tot2, c_tot3, c_tot4 = st.columns(4)
         with c_tot1:
             st.metric("Volume Total Sugerido (Semana t+2)", f"{total_semana_t2:,} refeições".replace(",", "."))
         with c_tot2:
-            st.metric("Média Diária Sugerida", f"{media_dia_t2} ref/dia")
+            st.metric("Média Diária em Dias Letivos", f"{media_dia_t2} ref/dia", delta=f"{dias_letivos_t2_count} dias operacionais")
         with c_tot3:
-            st.metric("Margem Protetiva Embutida", f"+{int(df_t2['margem_aplicada'].mean())} ref/dia", delta="Proteção Conformal")
+            st.metric("Calendário Escolar", f"{dias_letivos_t2_count} dias com atendimento", delta=f"{dias_fechados_t2_count} feriado/fechado" if dias_fechados_t2_count > 0 else "Semana 100% Letiva")
+        with c_tot4:
+            margem_med_t2 = int(df_letivos_t2["margem_aplicada"].mean()) if not df_letivos_t2.empty else 0
+            st.metric("Margem Protetiva Embutida", f"+{margem_med_t2} ref/dia", delta="Proteção Conformal")
             
         st.markdown("---")
         st.markdown("#### Grade Quinzenal de Compras e Sugestão de Preparo")
@@ -2584,10 +2809,16 @@ elif pagina_ativa == "Compras & Suprimentos":
         df_exibir_t2 = pd.DataFrame()
         df_exibir_t2["Data"] = df_t2["data"]
         df_exibir_t2["Dia da Semana"] = df_t2["dia_semana"]
+        df_exibir_t2["Calendário"] = df_t2.apply(
+            lambda r: f"⛔ {r['evento_tipo']}" if not r.get("is_dia_letivo", True) else "✅ Letivo Regular",
+            axis=1
+        )
         df_exibir_t2["Cardápio / Prato Previsto"] = df_t2.apply(
             lambda r: r["prato_principal"] if not r.get("is_dia_letivo", True) else f"{r['prato_principal']} ({r['proteina_tipo']})",
             axis=1
         )
+        df_exibir_t2["Origem do Cardápio"] = df_t2["status_cardapio"]
+        df_exibir_t2["Fonte Meteorológica"] = df_t2["status_clima"]
         df_exibir_t2["Previsão Base (IA)"] = df_t2["ia_pura"].astype(int).astype(str) + " ref"
         df_exibir_t2["Margem de Segurança"] = "+" + df_t2["margem_aplicada"].astype(int).astype(str) + " ref"
         df_exibir_t2["Sugestão de Preparo (Final)"] = df_t2.apply(

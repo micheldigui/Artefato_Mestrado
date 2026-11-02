@@ -47,6 +47,20 @@ DIAS_SEMANA_PT = {
     6: "Domingo"
 }
 
+# Mapeamento Oficial de Feriados Nacionais e Recessos Escolares
+FERIADOS_FIXOS_BR = {
+    "01-01": "Confraternização Universal",
+    "04-21": "Tiradentes",
+    "05-01": "Dia do Trabalho",
+    "07-09": "Revolução Constitucionalista",
+    "09-07": "Independência do Brasil",
+    "10-12": "Nossa Sra. Aparecida",
+    "11-02": "Finados",
+    "11-15": "Proclamação da República",
+    "11-20": "Dia da Consciência Negra",
+    "12-25": "Natal"
+}
+
 # Metadados Auditados dos 4 Cenários Experimentais (Ablation Study da Dissertação / Caderno 05)
 CENARIOS_DICT = {
     "Cenário 4 (Integração Nutricionista / Modelo Híbrido)": {
@@ -340,63 +354,106 @@ def executar_pipeline_previsao(
         if not row_fato.empty:
             is_letivo = bool(row_fato.iloc[0].get("is_dia_letivo", True))
             evento_nome = str(row_fato.iloc[0].get("evento_tipo", "Letivo Regular"))
+            status_leg = str(row_fato.iloc[0].get("status_legal", "")).lower().strip()
+            if status_leg == "nao_letivo" or evento_nome.lower() in ["feriado", "recesso", "ferias", "sem_atividade_letiva", "final_de_semana", "ponto_facultativo"]:
+                is_letivo = False
 
-        # Clima previsto para o dia
-        if usar_clima and not df_clima_futuro.empty:
-            clima_row = df_clima_futuro[df_clima_futuro["data_iso"] == data_iso]
-            if not clima_row.empty:
-                precip = float(clima_row.iloc[0]["precipitation_sum"])
-                temp_max = float(clima_row.iloc[0]["temperature_2m_max"])
+        chave_mes_dia = data_iso[5:]
+        nome_feriado = FERIADOS_FIXOS_BR.get(chave_mes_dia)
+        if not is_letivo:
+            if nome_feriado:
+                evento_rotulo = f"Feriado Nacional ({nome_feriado})"
+                prato = f"Feriado ({nome_feriado}) — Refeitório Fechado"
+            elif evento_nome.lower() == "feriado":
+                evento_rotulo = "Feriado Nacional"
+                prato = "Feriado — Refeitório Fechado"
+            elif "recesso" in evento_nome.lower():
+                evento_rotulo = "Recesso Escolar"
+                prato = "Recesso Escolar — Refeitório Fechado"
+            else:
+                evento_rotulo = evento_nome.replace("_", " ").title()
+                prato = f"Não Letivo ({evento_rotulo}) — Refeitório Fechado"
+            status_calendario = f"Não Letivo / {evento_rotulo}"
+        else:
+            evento_rotulo = "Letivo Regular"
+            status_calendario = "Dia Letivo Regular"
+
+        # Clima previsto para o dia e rastreabilidade da fonte meteorológica
+        fonte_clima_dia = "Desativado no Cenário"
+        if usar_clima:
+            if not df_clima_futuro.empty:
+                clima_row = df_clima_futuro[df_clima_futuro["data_iso"] == data_iso]
+                if not clima_row.empty:
+                    precip = float(clima_row.iloc[0]["precipitation_sum"])
+                    temp_max = float(clima_row.iloc[0]["temperature_2m_max"])
+                    fonte_clima_dia = str(clima_row.iloc[0].get("fonte_clima", "Satélite Open-Meteo"))
+                else:
+                    precip = 0.0
+                    temp_max = mediana_temp
+                    fonte_clima_dia = "Histórico Mediano (Offline)"
             else:
                 precip = 0.0
                 temp_max = mediana_temp
+                fonte_clima_dia = "Histórico Mediano (Offline)"
         else:
             precip = 0.0
             temp_max = mediana_temp
+            fonte_clima_dia = "Desativado no Cenário"
             
-        # Planejamento da nutricionista e cardapio
+        # Planejamento da nutricionista e rastreabilidade do cardápio
         plan_row = df_planejamento[df_planejamento["data_iso"] == data_iso]
         if not is_letivo:
-            prato = f"Feriado / Sem Atendimento ({evento_nome.replace('_', ' ').title()})"
             prot = "—"
             preparo = "—"
-        elif not plan_row.empty and usar_cardapio and pd.notna(plan_row.iloc[0].get("prato_principal")) and str(plan_row.iloc[0].get("prato_principal")).strip() != "":
+            status_cardapio = "Não Aplicável (Dia Não Letivo)"
+        elif not plan_row.empty and usar_cardapio and pd.notna(plan_row.iloc[0].get("prato_principal")) and str(plan_row.iloc[0].get("prato_principal")).strip() not in ["", "nan", "None"]:
             prato = str(plan_row.iloc[0].get("prato_principal"))
             prot = str(plan_row.iloc[0].get("proteina_tipo", "frango")).lower()
             preparo = str(plan_row.iloc[0].get("preparo_tipo", "assado"))
-        elif not row_fato.empty and usar_cardapio and pd.notna(row_fato.iloc[0].get("prato_principal")) and str(row_fato.iloc[0].get("prato_principal")).strip() != "":
+            status_cardapio = "Oficial (Cadastrado)"
+        elif not row_fato.empty and usar_cardapio and pd.notna(row_fato.iloc[0].get("prato_principal")) and str(row_fato.iloc[0].get("prato_principal")).strip() not in ["", "nan", "None"]:
             prato = str(row_fato.iloc[0].get("prato_principal"))
             prot = str(row_fato.iloc[0].get("proteina_tipo", "frango")).lower()
             preparo = str(row_fato.iloc[0].get("preparo_tipo", "assado"))
+            status_cardapio = "Oficial (Histórico)"
         else:
             prato = "Padrão Escolar Regular"
             prot = "frango"
             preparo = "assado"
+            status_cardapio = "Padrão Neutro (Não Cadastrado)" if usar_cardapio else "Desativado no Cenário"
             
-        # Quantitativo Institucional / Nutricionista
+        # Quantitativo Institucional / Nutricionista e rastreabilidade da meta humana
         val_nutri = None
         origem_nutri = "Não informado"
         val_nutri_informado = None
-        if usar_nutri and is_letivo:
+        status_nutri = "Não Informado (Operação Autônoma)"
+        if not is_letivo:
+            status_nutri = "Não Aplicável (Dia Não Letivo)"
+        elif usar_nutri and is_letivo:
             if not plan_row.empty and pd.notna(plan_row.iloc[0].get("planejado_nutri")) and float(plan_row.iloc[0].get("planejado_nutri", 0)) > 0:
                 val_nutri = float(plan_row.iloc[0].get("planejado_nutri"))
                 val_nutri_informado = val_nutri
                 origem_nutri = "Planejamento Nutrição (Produção)"
+                status_nutri = "Oficial (Planejado pela Gestão)"
             elif not row_fato.empty and pd.notna(row_fato.iloc[0].get("planejado_nutri")) and float(row_fato.iloc[0].get("planejado_nutri", 0)) > 0:
                 val_nutri = float(row_fato.iloc[0].get("planejado_nutri"))
                 val_nutri_informado = val_nutri
                 origem_nutri = "Quantitativo Institucional (Reservas)"
+                status_nutri = "Quantitativo Institucional"
             elif not row_fato.empty and pd.notna(row_fato.iloc[0].get("reservas")) and float(row_fato.iloc[0].get("reservas", 0)) > 0:
                 val_nutri = float(row_fato.iloc[0].get("reservas"))
                 val_nutri_informado = val_nutri
                 origem_nutri = "Quantitativo Institucional (Reservas)"
+                status_nutri = "Quantitativo Institucional"
             else:
                 val_nutri = 182.7 # Média histórica para o cálculo matemático se híbrido for forçado
                 origem_nutri = "Média Histórica (Fallback)"
                 val_nutri_informado = None
+                status_nutri = "Não Informado (Operação Autônoma)"
         else:
             val_nutri = None
             val_nutri_informado = None
+            status_nutri = "Desativado no Cenário"
             
         lag_5 = pegar_ultimo_consumo_dia_semana(dia_sem_num, defasagem_semanas=1)
         lag_10 = pegar_ultimo_consumo_dia_semana(dia_sem_num, defasagem_semanas=2)
@@ -482,7 +539,8 @@ def executar_pipeline_previsao(
             pred_base = 0.0
             margem_valor = 0.0
             pred_final = 0.0
-            alertas.append(f"Feriado / Sem Atendimento ({evento_nome.replace('_', ' ').title()})")
+            pred_ia_base = 0.0
+            alertas.append(f"{evento_rotulo} — Refeitório Fechado (0 refeições)")
         else:
             if dia_sem_num == 4:
                 alertas.append("Sexta-feira: retração sistemática de comparecimento (~20% menor)")
@@ -491,7 +549,9 @@ def executar_pipeline_previsao(
             elif usar_clima and precip >= 8.0:
                 alertas.append(f"Chuva prevista ({precip:.1f} mm): risco moderado de evasão")
             if usar_cardapio:
-                if "bovina" in prot or "feijoada" in prato.lower():
+                if status_cardapio == "Padrão Neutro (Não Cadastrado)":
+                    alertas.append("Cardápio não cadastrado (aplicando perfil escolar neutro)")
+                elif "bovina" in prot or "feijoada" in prato.lower():
                     alertas.append("Cardápio com proteína bovina: alta atratividade histórica")
                 elif "peixe" in prot or "ovo" in prot:
                     alertas.append("Proteína com menor atratividade histórica")
@@ -502,14 +562,19 @@ def executar_pipeline_previsao(
             "data_iso": data_iso,
             "dia_semana": dia_sem_nome,
             "is_dia_letivo": is_letivo,
-            "evento_tipo": evento_nome,
+            "evento_tipo": evento_rotulo,
+            "status_calendario": status_calendario,
             "horizonte": "Semana t+1 (Preparo)" if horizonte == "Semana_t1" else "Semana t+2 (Compras)",
             "prato_principal": prato if (usar_cardapio or not is_letivo) else "Cardápio Neutro",
             "proteina_tipo": prot.capitalize() if is_letivo else "—",
             "preparo_tipo": preparo.capitalize() if is_letivo else "—",
+            "status_cardapio": status_cardapio,
             "chuva_mm": round(precip, 1) if usar_clima else 0.0,
             "temp_max_c": round(temp_max, 1) if usar_clima else round(mediana_temp, 1),
+            "status_clima": fonte_clima_dia,
             "estimativa_nutri": round(val_nutri_informado) if (val_nutri_informado is not None and is_letivo) else None,
+            "status_nutri": status_nutri,
+            "origem_nutri": origem_nutri,
             "ia_pura": round(pred_ia_base) if is_letivo else 0,
             "pred_base_combinada": round(pred_base) if is_letivo else 0,
             "margem_aplicada": round(margem_valor) if is_letivo else 0,
@@ -727,15 +792,39 @@ def simular_previsao_data(
     if not row_fato.empty:
         is_letivo_sim = bool(row_fato.iloc[0].get("is_dia_letivo", True))
         evento_tipo_sim = str(row_fato.iloc[0].get("evento_tipo", "Letivo Regular"))
+        status_leg = str(row_fato.iloc[0].get("status_legal", "")).lower().strip()
+        if status_leg == "nao_letivo" or evento_tipo_sim.lower() in ["feriado", "recesso", "ferias", "sem_atividade_letiva", "final_de_semana", "ponto_facultativo"]:
+            is_letivo_sim = False
+    elif is_fim_semana:
+        is_letivo_sim = False
+        evento_tipo_sim = "final_de_semana"
 
+    chave_mes_dia = data_iso[5:]
+    nome_feriado = FERIADOS_FIXOS_BR.get(chave_mes_dia)
     if not is_letivo_sim:
+        if nome_feriado:
+            evento_tipo_sim = f"Feriado Nacional ({nome_feriado})"
+            prato_utilizado = f"Feriado ({nome_feriado}) — Refeitório Fechado"
+        elif evento_tipo_sim.lower() == "feriado":
+            evento_tipo_sim = "Feriado Nacional"
+            prato_utilizado = "Feriado — Refeitório Fechado"
+        elif "recesso" in evento_tipo_sim.lower():
+            evento_tipo_sim = "Recesso Escolar"
+            prato_utilizado = "Recesso Escolar — Refeitório Fechado"
+        elif is_fim_semana:
+            evento_tipo_sim = "Fim de Semana"
+            prato_utilizado = "Fim de Semana — Refeitório Fechado"
+        else:
+            evento_tipo_sim = evento_tipo_sim.replace("_", " ").title()
+            prato_utilizado = f"Não Letivo ({evento_tipo_sim}) — Refeitório Fechado"
         pred_base = 0.0
         margem_val = 0.0
         pred_final = 0.0
+        pred_ia = 0.0
 
     alertas = []
     if not is_letivo_sim:
-        alertas.append(f"Feriado / Não Letivo ({evento_tipo_sim.replace('_', ' ').title()}): Restaurante sem atendimento regular.")
+        alertas.append(f"{evento_tipo_sim}: Restaurante sem atendimento regular (0 refeições sugeridas).")
     elif is_fim_semana:
         alertas.append("Fim de semana (sábado/domingo): refeitório fechado ou com cardápio excepcional.")
     elif dia_sem == 4:

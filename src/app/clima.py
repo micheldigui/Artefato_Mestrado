@@ -49,6 +49,7 @@ def obter_previsao_clima_futura(dias_frente=14):
             df_clima["precipitation_sum"] = df_clima["precipitation_sum"].fillna(0.0)
             df_clima["temperature_2m_max"] = df_clima["temperature_2m_max"].fillna(24.5)
             df_clima["wind_gusts_10m_max"] = df_clima["wind_gusts_10m_max"].fillna(20.0)
+            df_clima["fonte_clima"] = "Satélite Open-Meteo"
             return df_clima
     except Exception as e:
         print(f"[AVISO] Não foi possível consultar API Open-Meteo ({e}). Utilizando médias sazonais.")
@@ -60,7 +61,8 @@ def obter_previsao_clima_futura(dias_frente=14):
         "data_iso": datas_futuras,
         "precipitation_sum": [2.5] * dias_frente,
         "temperature_2m_max": [24.0] * dias_frente,
-        "wind_gusts_10m_max": [18.0] * dias_frente
+        "wind_gusts_10m_max": [18.0] * dias_frente,
+        "fonte_clima": ["Mediana Histórica (Fallback Offline)"] * dias_frente
     })
 
 @cache_clima
