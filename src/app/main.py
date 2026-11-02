@@ -57,6 +57,9 @@ try:
         NOME_COMPRAS,
         NOME_PREPARO,
         MODELOS_RANKING,
+        MODELOS_SIMULADOR,
+        opcoes_simulador,
+        rotulo_simulador,
         MARGENS_INFO,
         FERIADOS_FIXOS_BR,
         CENARIO_PADRAO,
@@ -95,6 +98,9 @@ except ImportError:
         NOME_COMPRAS,
         NOME_PREPARO,
         MODELOS_RANKING,
+        MODELOS_SIMULADOR,
+        opcoes_simulador,
+        rotulo_simulador,
         MARGENS_INFO,
         FERIADOS_FIXOS_BR,
         CENARIO_PADRAO,
@@ -2462,10 +2468,8 @@ elif pagina_ativa == "Simulador de Cenários":
             # Em Compras (t+2) não existe quantitativo institucional
             if obj_chave == "compras":
                 opcoes_cenarios = [c for c in CENARIOS_DICT.keys() if "Cenário 4" not in c]
-                opcoes_modelos = [m for m in MODELOS_RANKING.keys() if "Híbrido" not in m and "Manual" not in m]
             else:
                 opcoes_cenarios = list(CENARIOS_DICT.keys())
-                opcoes_modelos = list(MODELOS_RANKING.keys())
                 
             cenario_sel = st.selectbox(
                 "Cenário de Dados (Ablation Study):",
@@ -2477,11 +2481,12 @@ elif pagina_ativa == "Simulador de Cenários":
             
             modelo_sel = st.selectbox(
                 "Modelo ou Algoritmo Preditivo:",
-                opcoes_modelos,
+                opcoes_simulador(obj_chave),
                 index=0,
-                key="sim_modelo_select"
+                format_func=lambda m: rotulo_simulador(obj_chave, m),
+                key=f"sim_modelo_select_{obj_chave}"
             )
-            st.caption(f"💡 **Como funciona:** {MODELOS_RANKING[modelo_sel]['detalhe']}")
+            st.caption(f"💡 **Como funciona:** {MODELOS_SIMULADOR[modelo_sel]['detalhe']}")
             
             margens_opcoes = list(MARGENS_INFO.keys()) + ["Margem Personalizada (Manual)"]
             margem_sel = st.selectbox(

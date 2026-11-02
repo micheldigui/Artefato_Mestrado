@@ -99,14 +99,14 @@ def colunas_do_cenario(horizonte: str, cenario: int) -> list:
 
 
 @cache_resource
-def modelo_congelado(horizonte: str, cenario: int):
-    """Treina o modelo escolhido para o horizonte com dados até 31/08/2026."""
-    return treinar_congelado(carregar_gold(horizonte), carregar_selecao()[horizonte]["algoritmo"], colunas_do_cenario(horizonte, cenario))
+def modelo_congelado(horizonte: str, cenario: int, algoritmo: str = None):
+    """Treina com dados até 31/08/2026 o algoritmo pedido ou, sem pedido, o escolhido para o horizonte."""
+    return treinar_congelado(carregar_gold(horizonte), algoritmo or carregar_selecao()[horizonte]["algoritmo"], colunas_do_cenario(horizonte, cenario))
 
 
 @cache_resource
-def modelo_walk_forward(horizonte: str, cenario: int, origem: pd.Timestamp):
-    """Treina o modelo escolhido para o horizonte apenas com dias anteriores à sexta de corte."""
+def modelo_walk_forward(horizonte: str, cenario: int, origem: pd.Timestamp, algoritmo: str = None):
+    """Treina o algoritmo pedido ou o escolhido para o horizonte apenas com dias anteriores à sexta de corte."""
     from src.core.models import obter_catalogo_modelos
     gold = carregar_gold(horizonte)
     cols = colunas_do_cenario(horizonte, cenario)
@@ -116,7 +116,7 @@ def modelo_walk_forward(horizonte: str, cenario: int, origem: pd.Timestamp):
     ]
     if len(treino) < 20:
         return None
-    modelo = obter_catalogo_modelos()[carregar_selecao()[horizonte]["algoritmo"]]["construtor"]()
+    modelo = obter_catalogo_modelos()[algoritmo or carregar_selecao()[horizonte]["algoritmo"]]["construtor"]()
     return modelo.fit(treino[cols], treino["alvo_relativo"].clip(*LIMITES_ALVO))
 
 
@@ -168,6 +168,23 @@ def carregar_margens() -> dict:
     return margens
 
 
+@cache_data
+def margem_do_algoritmo(horizonte: str, cenario: int, algoritmo: str, quantil: float) -> float:
+    """Margem de um algoritmo do torneio, calculada com os erros dele em Fev-Ago."""
+    preds = pd.read_parquet(RESULTADOS / "modelos" / "predicoes_detalhadas_torneio.parquet")
+    d = preds[
+        (preds["horizonte"] == horizonte) & (preds["cenario"] == CENARIOS_CORE[cenario]) & (preds["algoritmo"] == algoritmo) &
+        (preds["data"] >= "2026-02-01") & (preds["data"] <= "2026-08-31")
+    ]
+    return float(max(0.0, np.ceil(np.quantile(d["consumo_real"] - d["previsao"], quantil))))
+
+
+def algoritmos_do_torneio() -> list:
+    """Lista os algoritmos do torneio com sua descrição."""
+    from src.core.models import obter_catalogo_modelos
+    return [(chave, nome_modelo(chave), info["tipo_ensemble"]) for chave, info in obter_catalogo_modelos().items()]
+
+
 def cenario_oficial(horizonte: str) -> int:
     """Número do cenário escolhido na seleção para o horizonte."""
     return next(n for n, nome in CENARIOS_CORE.items() if nome == carregar_selecao()[horizonte]["cenario"])
@@ -179,5 +196,5 @@ def nome_do_modelo(horizonte: str) -> str:
 
 __all__ = [
     "atributos_da_emissao", "carregar_gold", "carregar_margens", "colunas_do_cenario", "combinar_hibrido", "FIM_TREINO_CONGELADO",
-    "linha_arquivada", "modelo_congelado", "modelo_walk_forward", "nome_do_modelo", "cenario_oficial", "origem_da_data", "prever"
+    "linha_arquivada", "margem_do_algoritmo", "modelo_congelado", "modelo_walk_forward", "algoritmos_do_torneio", "nome_do_modelo", "cenario_oficial", "origem_da_data", "prever"
 ]

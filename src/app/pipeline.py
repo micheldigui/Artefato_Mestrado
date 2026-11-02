@@ -14,14 +14,14 @@ try:
     from clima import obter_previsao_clima_futura, obter_clima_data
     from modelos import (
         FIM_TREINO_CONGELADO, atributos_da_emissao, carregar_gold, carregar_margens, combinar_hibrido, linha_arquivada,
-        modelo_congelado, modelo_walk_forward, nome_do_modelo, cenario_oficial, origem_da_data, prever
+        algoritmos_do_torneio, margem_do_algoritmo, modelo_congelado, modelo_walk_forward, nome_do_modelo, cenario_oficial, origem_da_data, prever
     )
 except ImportError:
     from .storage import carregar_planejamento_nutricionista, salvar_predicoes_geradas, carregar_fato_diaria_completa
     from .clima import obter_previsao_clima_futura, obter_clima_data
     from .modelos import (
         FIM_TREINO_CONGELADO, atributos_da_emissao, carregar_gold, carregar_margens, combinar_hibrido, linha_arquivada,
-        modelo_congelado, modelo_walk_forward, nome_do_modelo, cenario_oficial, origem_da_data, prever
+        algoritmos_do_torneio, margem_do_algoritmo, modelo_congelado, modelo_walk_forward, nome_do_modelo, cenario_oficial, origem_da_data, prever
     )
 
 DIAS_SEMANA_PT = {
@@ -101,6 +101,28 @@ MODELOS_RANKING = {
     }
 }
 
+# O simulador oferece todos os algoritmos; as telas de previsão usam só os modelos oficiais
+MODELOS_SIMULADOR = {**MODELOS_RANKING}
+for _chave, _nome, _tipo in algoritmos_do_torneio():
+    MODELOS_SIMULADOR[_nome] = {
+        "tipo": _tipo, "algoritmo": _chave,
+        "detalhe": f"{_nome}: algoritmo do torneio. Usa o cenário escolhido, com treino até a sexta de corte nas datas até 31/08/2026 e modelo congelado depois"
+    }
+
+
+def opcoes_simulador(objetivo):
+    """Lista os modelos do simulador, sempre com o campeão do objetivo em primeiro lugar."""
+    algoritmos = [nome for nome, info in MODELOS_SIMULADOR.items() if "algoritmo" in info]
+    if objetivo == "compras":
+        return [NOME_COMPRAS] + [nome for nome in algoritmos if nome != NOME_COMPRAS]
+    return [MODELO_HIBRIDO, MODELO_MANUAL] + algoritmos
+
+
+def rotulo_simulador(objetivo, modelo):
+    campeao = NOME_COMPRAS if objetivo == "compras" else MODELO_HIBRIDO
+    return f"{modelo} (campeão)" if modelo == campeao else modelo
+
+
 _MARGENS = carregar_margens()
 MARGEM_PADRAO = "Margem P85 (Padrão da Pesquisa)"
 MARGEM_SEM = "Predição Pura (Sem Margem)"
@@ -145,6 +167,14 @@ def calcular_margem(tipo_margem, politica, margem_custom=0.0):
     if quantil is None or politica == "manual":
         return 0.0
     return _MARGENS[quantil][politica]
+
+
+def margem_do_modelo(tipo_margem, politica, margem_custom, horizonte, cenario, algoritmo):
+    """Usa a margem do próprio algoritmo no simulador e a margem oficial nos demais casos."""
+    quantil = next((q for q in ("P75", "P85", "P90") if q in str(tipo_margem)), None)
+    if algoritmo is None or quantil is None or "Personalizada" in str(tipo_margem):
+        return calcular_margem(tipo_margem, politica, margem_custom)
+    return margem_do_algoritmo(horizonte, cenario, algoritmo, int(quantil[1:]) / 100)
 
 
 def cenario_da_ia(cfg, horizonte, eh_hibrido):
@@ -565,6 +595,7 @@ def simular_previsao_data(
     eh_hibrido = "Híbrido" in modelo_escolhido and hz == "t1"
     usar_nutri = hz == "t1" and (cen_cfg["usar_nutri"] or eh_hibrido or eh_manual)
     cenario_ia = cenario_da_ia(cen_cfg, hz, eh_hibrido)
+    algoritmo = MODELOS_SIMULADOR.get(modelo_escolhido, {}).get("algoritmo")
 
     # 4. Atributos na sexta de corte
     linha = linha_arquivada(dt_alvo, hz)
@@ -582,10 +613,10 @@ def simular_previsao_data(
             efeitos = gold.loc[gold["proteina"] == str(proteina_custom).lower(), "efeito_proteina"].dropna()
             linha = linha.assign(efeito_proteina=float(efeitos.iloc[-1]) if not efeitos.empty else np.nan, sem_cardapio=False)
         if dt_alvo < pd.Timestamp(FIM_TREINO_CONGELADO):
-            modelo = modelo_walk_forward(hz, cenario_ia, origem)
+            modelo = modelo_walk_forward(hz, cenario_ia, origem, algoritmo)
             regime_modelo = f"Walk-forward até {origem.strftime('%d/%m/%Y')}"
         else:
-            modelo = modelo_congelado(hz, cenario_ia)
+            modelo = modelo_congelado(hz, cenario_ia, algoritmo)
             regime_modelo = "Modelo congelado em 31/08/2026"
         if modelo is not None:
             pred_ia = prever(modelo, linha, hz, cenario_ia)
@@ -597,7 +628,7 @@ def simular_previsao_data(
                 pred_base, politica = float(combinar_hibrido([pred_ia], [nutri_utilizado])[0]), "hibrido"
             else:
                 pred_base, politica = pred_ia, ("t2" if hz == "t2" else "ia")
-            margem_val = calcular_margem(tipo_margem, politica, margem_customizada)
+            margem_val = margem_do_modelo(tipo_margem, politica, margem_customizada, hz, cenario_ia, algoritmo)
 
     if usar_clima and chuva_utilizada >= 15.0:
         margem_val = 0.0

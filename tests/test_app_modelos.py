@@ -39,6 +39,27 @@ def test_simulador_nunca_usa_clima_observado():
     assert sim["chuva_utilizada"] == pytest.approx(19.6, abs=0.1)
 
 
+def test_simulador_abre_com_o_campeao_e_oferece_todos_os_modelos():
+    assert p.opcoes_simulador("consumo")[0] == p.MODELO_HIBRIDO
+    assert p.opcoes_simulador("compras")[0] == p.NOME_COMPRAS
+    assert len(p.opcoes_simulador("consumo")) == 22
+    assert len(p.opcoes_simulador("compras")) == 20
+    assert not any("Híbrido" in m or "Manual" in m for m in p.opcoes_simulador("compras"))
+    assert p.rotulo_simulador("compras", p.NOME_COMPRAS).endswith("(campeão)")
+
+
+def test_algoritmo_do_simulador_reproduz_o_torneio():
+    preds = pd.read_parquet(RESULTADOS / "modelos" / "predicoes_detalhadas_torneio.parquet")
+    filtro = (preds["horizonte"] == "t1") & (preds["cenario"] == "Cenario_2_Com_Cardapio") & (preds["algoritmo"] == "Lasso")
+    esperado = float(preds[filtro & (preds["data"] == "2026-03-10")]["previsao"].iloc[0])
+    assert p.simular_previsao_data("2026-03-10", modelo_escolhido="Lasso")["pred_ia"] == esperado
+
+
+def test_margem_do_simulador_e_a_do_proprio_algoritmo():
+    assert p.margem_do_modelo(p.MARGEM_PADRAO, "ia", 0.0, "t1", 2, "Lasso") > 0
+    assert p.margem_do_modelo(p.MARGEM_PADRAO, "hibrido", 0.0, "t1", 2, None) == p.calcular_margem(p.MARGEM_PADRAO, "hibrido")
+
+
 def test_compras_usam_o_modelo_congelado_escolhido():
     ref = carregar_selecao()["t2"]
     gold = p.carregar_gold("t2")
