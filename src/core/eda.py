@@ -44,9 +44,9 @@ def carregar_dados_eda() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
 
 
 def carregar_dias_dos_metodos() -> Tuple[pd.DataFrame, pd.DataFrame]:
-    """Seleciona todos os dias com consumo. O erro dos métodos não pode depender do resultado do dia."""
-    gold = pd.read_parquet(GOLD / "gold_t1.parquet")
-    servidos = gold[gold["consumo"].notna()]
+    """Seleciona todos os dias com consumo e plano. O erro dos métodos não pode depender do resultado do dia."""
+    fato = pd.read_parquet(SILVER / "silver_fato_diaria.parquet")
+    servidos = fato[fato["consumo"].notna()]
     dias_disc = servidos[(servidos["ano"] <= 2025) & servidos["reserva_discente"].notna()].copy()
     dias_nutri = servidos[(servidos["ano"] == 2026) & servidos["plano_nutricionista"].notna()].copy()
     return dias_disc, dias_nutri
@@ -326,7 +326,8 @@ def gerar_suite_12_figuras_dissertacao(treino: pd.DataFrame, periodo_discente: p
         consumo_medio=("consumo", "mean")
     ).sort_values("consumo_medio", ascending=False)
     
-    bars_prep = ax.bar(prep_dados.index, prep_dados["consumo_medio"], color="#8e44ad", width=0.55, edgecolor="black", linewidth=0.5)
+    rotulos_prep = [str(p).replace("_ou_", " ou ").replace("_a_", " à ").replace("_", " ").capitalize() for p in prep_dados.index]
+    bars_prep = ax.bar(rotulos_prep, prep_dados["consumo_medio"], color="#8e44ad", width=0.55, edgecolor="black", linewidth=0.5)
     for bar, dias in zip(bars_prep, prep_dados["dias"]):
         h = bar.get_height()
         ax.text(bar.get_x() + bar.get_width()/2, h + 3, f"{h:.1f} ref\n({dias} dias)", ha="center", va="bottom", fontsize=9, fontweight="bold")
@@ -334,6 +335,8 @@ def gerar_suite_12_figuras_dissertacao(treino: pd.DataFrame, periodo_discente: p
     ax.set_title("Consumo Médio Conforme a Técnica de Preparo Culinário", fontweight="bold", pad=12)
     ax.set_ylabel("Média de Refeições Servidas")
     ax.set_ylim(0, prep_dados["consumo_medio"].max() + 25)
+    ax.tick_params(axis="x", labelrotation=30)
+    plt.setp(ax.get_xticklabels(), ha="right", rotation_mode="anchor")
     plt.tight_layout()
     fig.savefig(PASTA_FIGURAS / "figura_07_consumo_por_tecnica_preparo.png")
     plt.close()

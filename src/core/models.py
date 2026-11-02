@@ -9,6 +9,7 @@ Implementa a taxonomia completa de métodos de Machine Learning e Ensembles:
   6. Ensembles de Stacking: Meta-aprendizado com StackingRegressor.
   7. Ensembles de Blending: Validação holdout temporal com pesos não-negativos (NNLS).
   8. Ensembles de Cascading: Encadeamento em dois estágios (âncora linear -> resíduo não-linear).
+  9. Demais famílias: KNN, SVR, Rede Neural MLP e Árvore de Decisão; Bagging de Árvores na família Bagging.
 
 Ablation Study em 4 Cenários de Informação nos Horizontes T+1 (Preparo) e T+2 (Compras).
 """
@@ -29,9 +30,14 @@ from sklearn.ensemble import (
     ExtraTreesRegressor,
     GradientBoostingRegressor,
     AdaBoostRegressor,
+    BaggingRegressor,
     VotingRegressor,
     StackingRegressor
 )
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.neural_network import MLPRegressor
+from sklearn.svm import SVR
+from sklearn.tree import DecisionTreeRegressor
 from lightgbm import LGBMRegressor
 from xgboost import XGBRegressor
 from catboost import CatBoostRegressor
@@ -186,6 +192,32 @@ def obter_catalogo_modelos() -> Dict[str, dict]:
         "construtor": lambda: criar_pipeline_linear(ElasticNet(alpha=0.01, l1_ratio=0.5, max_iter=3000, random_state=SEMENTE_ALEATORIA))
     }
 
+    # --- Demais famílias: vizinhança, margem, árvore única e rede neural ---
+    modelos["KNN"] = {
+        "familia": "Vizinhança",
+        "tipo_ensemble": "Nenhum (Vizinhos Mais Próximos)",
+        "construtor": lambda: criar_pipeline_linear(KNeighborsRegressor(n_neighbors=5))
+    }
+    modelos["SVR"] = {
+        "familia": "Vetores de Suporte",
+        "tipo_ensemble": "Nenhum (Margem com Kernel)",
+        "construtor": lambda: criar_pipeline_linear(SVR(C=0.33, epsilon=0.03))
+    }
+    modelos["Arvore_Decisao"] = {
+        "familia": "Árvore de Decisão",
+        "tipo_ensemble": "Nenhum (Árvore Única)",
+        "construtor": lambda: criar_pipeline_arvore(DecisionTreeRegressor(
+            max_depth=6, min_samples_split=4, random_state=SEMENTE_ALEATORIA
+        ))
+    }
+    modelos["MLP"] = {
+        "familia": "Rede Neural",
+        "tipo_ensemble": "Nenhum (Perceptron Multicamadas)",
+        "construtor": lambda: criar_pipeline_linear(MLPRegressor(
+            hidden_layer_sizes=(64, 32), max_iter=500, random_state=SEMENTE_ALEATORIA
+        ))
+    }
+
     # --- Família 2: Ensembles de Bagging (Bootstrap Aggregating) ---
     modelos["Ensemble_Bagging_RandomForest"] = {
         "familia": "Ensemble",
@@ -199,6 +231,15 @@ def obter_catalogo_modelos() -> Dict[str, dict]:
         "tipo_ensemble": "Bagging (Árvores Extremamente Aleatórias)",
         "construtor": lambda: criar_pipeline_arvore(ExtraTreesRegressor(
             n_estimators=80, min_samples_leaf=5, max_features=0.6, random_state=SEMENTE_ALEATORIA, n_jobs=1
+        ))
+    }
+
+    modelos["Ensemble_Bagging_Arvores"] = {
+        "familia": "Ensemble",
+        "tipo_ensemble": "Bagging (Árvores de Decisão)",
+        "construtor": lambda: criar_pipeline_arvore(BaggingRegressor(
+            DecisionTreeRegressor(max_depth=6, min_samples_split=4, random_state=SEMENTE_ALEATORIA),
+            n_estimators=50, random_state=SEMENTE_ALEATORIA, n_jobs=1
         ))
     }
 

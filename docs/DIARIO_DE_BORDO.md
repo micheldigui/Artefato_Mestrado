@@ -220,7 +220,7 @@
 
 ### [Entrada #009] – 02/11/2026: Fechamento dos Notebooks e das Figuras dos Métodos Humanos
 * **Ações Executadas:**
-  1. **Figuras 01 e 02:** passaram a medir o erro dos métodos humanos em todos os dias com consumo (442 dias em 2023-2025 e 156 em 2026). Os valores substituem os da Entrada #003: nutricionista com $r=0.619$, MAE 29,0 e WAPE 17,1%; reservas com $r=0.575$, MAE 27,2 e WAPE 20,2%.
+  1. **Figuras 01 e 02:** passaram a medir o erro dos métodos humanos em todos os dias com consumo (458 dias em 2023-2025 e 156 em 2026). Os valores substituem os da Entrada #003: nutricionista com $r=0.619$, MAE 29,0 e WAPE 17,1%; reservas com $r=0.571$, MAE 27,1 e WAPE 20,2%.
   2. **Notebooks:** o 04 reúne a avaliação retrospectiva de Fev-Ago, com torneio, híbrido e margens. O 05 reúne a avaliação prospectiva de Set-Out. Treino e teste seguem no mesmo fluxo, com a regra de treino inalterada.
   3. **Saídas:** os cinco notebooks passaram a ser salvos com as tabelas e figuras.
 * **Decisões Técnicas Registradas:**

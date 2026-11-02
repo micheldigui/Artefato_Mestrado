@@ -5,8 +5,13 @@ t1;Cenario_1_Base_Cardapio;Regressao_Linear;Linear;Nenhum (Modelo Base);156;42.1
 t1;Cenario_1_Base_Cardapio;Ridge;Linear Regularizado;Nenhum (L2 Regularized);156;30.42;43.4;0.257;17.9;1997;2749;34.0;65.4
 t1;Cenario_1_Base_Cardapio;Lasso;Linear Regularizado;Nenhum (L1 Sparse);156;29.09;42.95;0.273;17.11;2240;2298;38.5;60.9
 t1;Cenario_1_Base_Cardapio;ElasticNet;Linear Regularizado;Nenhum (L1+L2 Regularized);156;29.87;43.23;0.263;17.57;2128;2532;36.5;62.2
+t1;Cenario_1_Base_Cardapio;KNN;Vizinhança;Nenhum (Vizinhos Mais Próximos);156;31.97;48.34;0.079;18.81;3432;1555;52.6;46.2
+t1;Cenario_1_Base_Cardapio;SVR;Vetores de Suporte;Nenhum (Margem com Kernel);156;30.42;45.33;0.19;17.89;2322;2423;35.3;63.5
+t1;Cenario_1_Base_Cardapio;Arvore_Decisao;Árvore de Decisão;Nenhum (Árvore Única);156;42.54;68.2;-0.834;25.03;4692;1945;53.8;44.9
+t1;Cenario_1_Base_Cardapio;MLP;Rede Neural;Nenhum (Perceptron Multicamadas);156;47.43;62.99;-0.564;27.9;4106;3293;48.1;50.0
 t1;Cenario_1_Base_Cardapio;Ensemble_Bagging_RandomForest;Ensemble;Bagging (Bootstrap Paralelo);156;30.69;47.76;0.101;18.05;2900;1888;44.9;54.5
 t1;Cenario_1_Base_Cardapio;Ensemble_Bagging_ExtraTrees;Ensemble;Bagging (Árvores Extremamente Aleatórias);156;28.92;44.51;0.219;17.01;2505;2007;41.0;56.4
+t1;Cenario_1_Base_Cardapio;Ensemble_Bagging_Arvores;Ensemble;Bagging (Árvores de Decisão);156;32.7;51.07;-0.028;19.24;3258;1843;46.8;52.6
 t1;Cenario_1_Base_Cardapio;Ensemble_Boosting_Gradient;Ensemble;Boosting (Gradient Boosting Robusto);156;29.92;46.07;0.163;17.6;2851;1817;47.4;50.6
 t1;Cenario_1_Base_Cardapio;Ensemble_Boosting_AdaBoost;Ensemble;Boosting (AdaBoost Adaptativo);156;31.17;47.64;0.105;18.33;2912;1950;43.6;56.4
 t1;Cenario_1_Base_Cardapio;Ensemble_Boosting_LightGBM;Ensemble;Boosting (LightGBM Leaf-wise);156;30.83;47.44;0.113;18.13;2826;1983;45.5;53.2
@@ -22,8 +27,13 @@ t1;Cenario_2_Com_Cardapio;Regressao_Linear;Linear;Nenhum (Modelo Base);156;41.21
 t1;Cenario_2_Com_Cardapio;Ridge;Linear Regularizado;Nenhum (L2 Regularized);156;29.02;42.12;0.301;17.07;2100;2427;38.5;59.6
 t1;Cenario_2_Com_Cardapio;Lasso;Linear Regularizado;Nenhum (L1 Sparse);156;28.56;42.2;0.298;16.8;2289;2167;41.0;57.7
 t1;Cenario_2_Com_Cardapio;ElasticNet;Linear Regularizado;Nenhum (L1+L2 Regularized);156;29.1;42.5;0.288;17.12;2200;2340;38.5;59.6
+t1;Cenario_2_Com_Cardapio;KNN;Vizinhança;Nenhum (Vizinhos Mais Próximos);156;31.94;48.42;0.076;18.79;3315;1668;52.6;47.4
+t1;Cenario_2_Com_Cardapio;SVR;Vetores de Suporte;Nenhum (Margem com Kernel);156;29.97;45.24;0.193;17.63;2364;2311;36.5;60.3
+t1;Cenario_2_Com_Cardapio;Arvore_Decisao;Árvore de Decisão;Nenhum (Árvore Única);156;38.87;62.18;-0.524;22.87;3821;2243;48.7;48.7
+t1;Cenario_2_Com_Cardapio;MLP;Rede Neural;Nenhum (Perceptron Multicamadas);156;67.7;88.43;-2.083;39.82;7559;3002;64.1;35.9
 t1;Cenario_2_Com_Cardapio;Ensemble_Bagging_RandomForest;Ensemble;Bagging (Bootstrap Paralelo);156;30.23;47.44;0.113;17.78;2887;1829;44.2;53.2
 t1;Cenario_2_Com_Cardapio;Ensemble_Bagging_ExtraTrees;Ensemble;Bagging (Árvores Extremamente Aleatórias);156;28.49;44.43;0.222;16.76;2495;1949;42.3;56.4
+t1;Cenario_2_Com_Cardapio;Ensemble_Bagging_Arvores;Ensemble;Bagging (Árvores de Decisão);156;31.65;49.13;0.048;18.62;3059;1879;44.9;53.8
 t1;Cenario_2_Com_Cardapio;Ensemble_Boosting_Gradient;Ensemble;Boosting (Gradient Boosting Robusto);156;29.44;45.86;0.171;17.32;2769;1824;48.7;50.6
 t1;Cenario_2_Com_Cardapio;Ensemble_Boosting_AdaBoost;Ensemble;Boosting (AdaBoost Adaptativo);156;30.37;46.59;0.144;17.87;2833;1905;44.9;53.2
 t1;Cenario_2_Com_Cardapio;Ensemble_Boosting_LightGBM;Ensemble;Boosting (LightGBM Leaf-wise);156;30.47;47.08;0.126;17.92;2808;1945;44.9;55.1
@@ -39,8 +49,13 @@ t1;Cenario_3_Com_Clima;Regressao_Linear;Linear;Nenhum (Modelo Base);156;41.06;63
 t1;Cenario_3_Com_Clima;Ridge;Linear Regularizado;Nenhum (L2 Regularized);156;29.58;43.11;0.267;17.4;2197;2417;39.7;59.0
 t1;Cenario_3_Com_Clima;Lasso;Linear Regularizado;Nenhum (L1 Sparse);156;28.99;43.03;0.27;17.05;2395;2127;43.6;56.4
 t1;Cenario_3_Com_Clima;ElasticNet;Linear Regularizado;Nenhum (L1+L2 Regularized);156;29.8;43.42;0.257;17.53;2317;2332;41.7;58.3
+t1;Cenario_3_Com_Clima;KNN;Vizinhança;Nenhum (Vizinhos Mais Próximos);156;31.27;47.72;0.102;18.39;3322;1556;54.5;45.5
+t1;Cenario_3_Com_Clima;SVR;Vetores de Suporte;Nenhum (Margem com Kernel);156;29.91;45.16;0.196;17.59;2387;2279;38.5;59.6
+t1;Cenario_3_Com_Clima;Arvore_Decisao;Árvore de Decisão;Nenhum (Árvore Única);156;44.08;66.66;-0.751;25.93;4357;2520;50.6;47.4
+t1;Cenario_3_Com_Clima;MLP;Rede Neural;Nenhum (Perceptron Multicamadas);156;59.64;75.49;-1.246;35.08;4464;4840;42.3;57.7
 t1;Cenario_3_Com_Clima;Ensemble_Bagging_RandomForest;Ensemble;Bagging (Bootstrap Paralelo);156;30.53;47.3;0.118;17.96;2917;1845;44.9;53.8
 t1;Cenario_3_Com_Clima;Ensemble_Bagging_ExtraTrees;Ensemble;Bagging (Árvores Extremamente Aleatórias);156;29.02;44.83;0.208;17.07;2525;2002;42.9;54.5
+t1;Cenario_3_Com_Clima;Ensemble_Bagging_Arvores;Ensemble;Bagging (Árvores de Decisão);156;31.4;49.36;0.04;18.47;3114;1784;47.4;51.3
 t1;Cenario_3_Com_Clima;Ensemble_Boosting_Gradient;Ensemble;Boosting (Gradient Boosting Robusto);156;30.25;46.82;0.136;17.79;2901;1818;48.1;49.4
 t1;Cenario_3_Com_Clima;Ensemble_Boosting_AdaBoost;Ensemble;Boosting (AdaBoost Adaptativo);156;30.76;46.93;0.132;18.09;2977;1821;46.2;53.8
 t1;Cenario_3_Com_Clima;Ensemble_Boosting_LightGBM;Ensemble;Boosting (LightGBM Leaf-wise);156;30.95;47.86;0.097;18.21;2907;1921;44.2;55.8
@@ -56,8 +71,13 @@ t1;Cenario_4_Com_Nutricionista;Regressao_Linear;Linear;Nenhum (Modelo Base);156;
 t1;Cenario_4_Com_Nutricionista;Ridge;Linear Regularizado;Nenhum (L2 Regularized);156;27.35;41.51;0.321;16.09;1946;2321;35.3;63.5
 t1;Cenario_4_Com_Nutricionista;Lasso;Linear Regularizado;Nenhum (L1 Sparse);156;26.08;40.7;0.347;15.34;2251;1817;41.7;57.1
 t1;Cenario_4_Com_Nutricionista;ElasticNet;Linear Regularizado;Nenhum (L1+L2 Regularized);156;26.46;41.32;0.327;15.56;2133;1994;37.8;59.6
+t1;Cenario_4_Com_Nutricionista;KNN;Vizinhança;Nenhum (Vizinhos Mais Próximos);156;30.6;47.28;0.119;18.0;3267;1507;55.1;44.9
+t1;Cenario_4_Com_Nutricionista;SVR;Vetores de Suporte;Nenhum (Margem com Kernel);156;28.69;43.94;0.239;16.87;2341;2134;40.4;59.0
+t1;Cenario_4_Com_Nutricionista;Arvore_Decisao;Árvore de Decisão;Nenhum (Árvore Única);156;36.28;52.55;-0.089;21.34;3113;2546;46.8;51.9
+t1;Cenario_4_Com_Nutricionista;MLP;Rede Neural;Nenhum (Perceptron Multicamadas);156;56.25;77.06;-1.341;33.09;5768;3007;55.8;43.6
 t1;Cenario_4_Com_Nutricionista;Ensemble_Bagging_RandomForest;Ensemble;Bagging (Bootstrap Paralelo);156;28.74;44.94;0.204;16.9;2687;1796;48.7;50.6
 t1;Cenario_4_Com_Nutricionista;Ensemble_Bagging_ExtraTrees;Ensemble;Bagging (Árvores Extremamente Aleatórias);156;27.65;43.36;0.259;16.27;2478;1836;44.2;55.1
+t1;Cenario_4_Com_Nutricionista;Ensemble_Bagging_Arvores;Ensemble;Bagging (Árvores de Decisão);156;30.1;46.81;0.136;17.7;2777;1918;48.1;51.3
 t1;Cenario_4_Com_Nutricionista;Ensemble_Boosting_Gradient;Ensemble;Boosting (Gradient Boosting Robusto);156;28.22;43.85;0.242;16.6;2647;1755;48.7;51.3
 t1;Cenario_4_Com_Nutricionista;Ensemble_Boosting_AdaBoost;Ensemble;Boosting (AdaBoost Adaptativo);156;31.85;48.12;0.087;18.74;2801;2168;46.2;51.9
 t1;Cenario_4_Com_Nutricionista;Ensemble_Boosting_LightGBM;Ensemble;Boosting (LightGBM Leaf-wise);156;28.6;45.03;0.201;16.82;2743;1718;47.4;50.0
@@ -73,8 +93,13 @@ t2;Cenario_1_Base_Cardapio;Regressao_Linear;Linear;Nenhum (Modelo Base);156;47.4
 t2;Cenario_1_Base_Cardapio;Ridge;Linear Regularizado;Nenhum (L2 Regularized);156;31.52;45.87;0.171;18.54;2186;2731;38.5;60.9
 t2;Cenario_1_Base_Cardapio;Lasso;Linear Regularizado;Nenhum (L1 Sparse);156;29.61;44.66;0.214;17.42;2264;2355;38.5;60.3
 t2;Cenario_1_Base_Cardapio;ElasticNet;Linear Regularizado;Nenhum (L1+L2 Regularized);156;31.16;45.84;0.172;18.33;2266;2595;38.5;60.9
+t2;Cenario_1_Base_Cardapio;KNN;Vizinhança;Nenhum (Vizinhos Mais Próximos);156;32.26;48.39;0.077;18.98;3125;1908;51.9;47.4
+t2;Cenario_1_Base_Cardapio;SVR;Vetores de Suporte;Nenhum (Margem com Kernel);156;31.82;47.0;0.129;18.72;2431;2533;38.5;60.3
+t2;Cenario_1_Base_Cardapio;Arvore_Decisao;Árvore de Decisão;Nenhum (Árvore Única);156;37.62;53.24;-0.117;22.13;3403;2466;50.0;48.7
+t2;Cenario_1_Base_Cardapio;MLP;Rede Neural;Nenhum (Perceptron Multicamadas);156;51.65;72.13;-1.051;30.39;4740;3318;51.9;48.1
 t2;Cenario_1_Base_Cardapio;Ensemble_Bagging_RandomForest;Ensemble;Bagging (Bootstrap Paralelo);156;30.6;47.22;0.121;18.0;2676;2098;39.1;56.4
 t2;Cenario_1_Base_Cardapio;Ensemble_Bagging_ExtraTrees;Ensemble;Bagging (Árvores Extremamente Aleatórias);156;28.88;45.18;0.195;16.99;2391;2114;38.5;58.3
+t2;Cenario_1_Base_Cardapio;Ensemble_Bagging_Arvores;Ensemble;Bagging (Árvores de Decisão);156;31.51;47.88;0.096;18.53;2809;2106;42.9;55.8
 t2;Cenario_1_Base_Cardapio;Ensemble_Boosting_Gradient;Ensemble;Boosting (Gradient Boosting Robusto);156;31.22;47.36;0.116;18.37;2619;2252;39.7;58.3
 t2;Cenario_1_Base_Cardapio;Ensemble_Boosting_AdaBoost;Ensemble;Boosting (AdaBoost Adaptativo);156;30.84;46.99;0.13;18.14;2698;2113;42.3;55.8
 t2;Cenario_1_Base_Cardapio;Ensemble_Boosting_LightGBM;Ensemble;Boosting (LightGBM Leaf-wise);156;32.06;49.21;0.045;18.86;2769;2233;37.2;60.9
@@ -90,8 +115,13 @@ t2;Cenario_2_Com_Cardapio;Regressao_Linear;Linear;Nenhum (Modelo Base);156;49.22
 t2;Cenario_2_Com_Cardapio;Ridge;Linear Regularizado;Nenhum (L2 Regularized);156;31.07;44.96;0.203;18.28;2261;2586;37.8;59.6
 t2;Cenario_2_Com_Cardapio;Lasso;Linear Regularizado;Nenhum (L1 Sparse);156;29.33;44.1;0.233;17.26;2428;2148;42.9;56.4
 t2;Cenario_2_Com_Cardapio;ElasticNet;Linear Regularizado;Nenhum (L1+L2 Regularized);156;30.39;45.11;0.198;17.88;2381;2360;39.7;58.3
+t2;Cenario_2_Com_Cardapio;KNN;Vizinhança;Nenhum (Vizinhos Mais Próximos);156;32.29;48.52;0.072;18.99;3039;1998;48.7;50.0
+t2;Cenario_2_Com_Cardapio;SVR;Vetores de Suporte;Nenhum (Margem com Kernel);156;31.6;47.52;0.11;18.59;2475;2454;36.5;60.9
+t2;Cenario_2_Com_Cardapio;Arvore_Decisao;Árvore de Decisão;Nenhum (Árvore Única);156;38.12;53.86;-0.144;22.42;3291;2655;48.7;50.6
+t2;Cenario_2_Com_Cardapio;MLP;Rede Neural;Nenhum (Perceptron Multicamadas);156;71.48;93.86;-2.473;42.05;7498;3653;53.2;44.9
 t2;Cenario_2_Com_Cardapio;Ensemble_Bagging_RandomForest;Ensemble;Bagging (Bootstrap Paralelo);156;30.17;46.8;0.137;17.75;2650;2057;41.7;55.8
 t2;Cenario_2_Com_Cardapio;Ensemble_Bagging_ExtraTrees;Ensemble;Bagging (Árvores Extremamente Aleatórias);156;28.95;45.71;0.176;17.03;2470;2046;39.7;56.4
+t2;Cenario_2_Com_Cardapio;Ensemble_Bagging_Arvores;Ensemble;Bagging (Árvores de Decisão);156;31.16;47.28;0.119;18.33;2790;2071;42.9;55.1
 t2;Cenario_2_Com_Cardapio;Ensemble_Boosting_Gradient;Ensemble;Boosting (Gradient Boosting Robusto);156;31.33;47.87;0.097;18.43;2673;2214;42.9;53.8
 t2;Cenario_2_Com_Cardapio;Ensemble_Boosting_AdaBoost;Ensemble;Boosting (AdaBoost Adaptativo);156;30.28;45.44;0.186;17.81;2560;2163;41.0;57.7
 t2;Cenario_2_Com_Cardapio;Ensemble_Boosting_LightGBM;Ensemble;Boosting (LightGBM Leaf-wise);156;32.21;49.87;0.02;18.95;2824;2201;40.4;59.0
@@ -107,8 +137,13 @@ t2;Cenario_3_Com_Clima;Regressao_Linear;Linear;Nenhum (Modelo Base);156;55.86;82
 t2;Cenario_3_Com_Clima;Ridge;Linear Regularizado;Nenhum (L2 Regularized);156;32.87;47.53;0.11;19.34;2253;2875;35.3;62.2
 t2;Cenario_3_Com_Clima;Lasso;Linear Regularizado;Nenhum (L1 Sparse);156;29.88;45.03;0.201;17.58;2475;2187;42.9;57.1
 t2;Cenario_3_Com_Clima;ElasticNet;Linear Regularizado;Nenhum (L1+L2 Regularized);156;31.26;46.34;0.153;18.39;2423;2454;37.8;60.9
+t2;Cenario_3_Com_Clima;KNN;Vizinhança;Nenhum (Vizinhos Mais Próximos);156;33.78;49.26;0.043;19.87;3079;2191;48.1;51.3
+t2;Cenario_3_Com_Clima;SVR;Vetores de Suporte;Nenhum (Margem com Kernel);156;33.17;48.51;0.072;19.51;2639;2535;41.0;59.0
+t2;Cenario_3_Com_Clima;Arvore_Decisao;Árvore de Decisão;Nenhum (Árvore Única);156;38.64;54.93;-0.19;22.73;3524;2504;51.9;47.4
+t2;Cenario_3_Com_Clima;MLP;Rede Neural;Nenhum (Perceptron Multicamadas);156;70.49;88.52;-2.089;41.47;5161;5836;42.9;57.1
 t2;Cenario_3_Com_Clima;Ensemble_Bagging_RandomForest;Ensemble;Bagging (Bootstrap Paralelo);156;30.44;46.87;0.134;17.91;2678;2071;44.2;54.5
 t2;Cenario_3_Com_Clima;Ensemble_Bagging_ExtraTrees;Ensemble;Bagging (Árvores Extremamente Aleatórias);156;29.37;45.78;0.174;17.28;2452;2130;39.1;59.6
+t2;Cenario_3_Com_Clima;Ensemble_Bagging_Arvores;Ensemble;Bagging (Árvores de Decisão);156;30.48;46.53;0.147;17.93;2737;2018;44.9;53.8
 t2;Cenario_3_Com_Clima;Ensemble_Boosting_Gradient;Ensemble;Boosting (Gradient Boosting Robusto);156;31.76;47.96;0.093;18.68;2743;2211;44.2;54.5
 t2;Cenario_3_Com_Clima;Ensemble_Boosting_AdaBoost;Ensemble;Boosting (AdaBoost Adaptativo);156;29.56;45.11;0.198;17.39;2614;1998;42.3;55.1
 t2;Cenario_3_Com_Clima;Ensemble_Boosting_LightGBM;Ensemble;Boosting (LightGBM Leaf-wise);156;32.4;50.07;0.012;19.06;2906;2148;41.7;58.3
