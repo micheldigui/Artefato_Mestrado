@@ -61,39 +61,39 @@ FERIADOS_FIXOS_BR = {
     "12-25": "Natal"
 }
 
-# Metadados Auditados dos 4 Cenários Experimentais (Ablation Study da Dissertação / Caderno 05)
+# Metadados Auditados dos 4 Cenários de Dados (Estudo de Ablação / Caderno 05)
 CENARIOS_DICT = {
-    "Cenário 4 (Integração Nutricionista / Modelo Híbrido)": {
-        "usar_clima": True,
-        "usar_cardapio": True,
-        "usar_nutri": True,
-        "mae_t1": 20.20,
-        "mae_t2": 26.91,
-        "descricao": "Cenário 3 + Planejamento Institucional da Nutrição (Modelo Híbrido Human-in-the-Loop, MAE 20,20 ref)"
-    },
-    "Cenário 3 (Base + Cardápio + Clima Open-Meteo)": {
-        "usar_clima": True,
-        "usar_cardapio": True,
-        "usar_nutri": False,
-        "mae_t1": 25.27,
-        "mae_t2": 26.07,
-        "descricao": "Cenário 2 + Previsão meteorológica de satélite Open-Meteo (volume de chuva e temperatura máxima, autônomo)"
-    },
-    "Cenário 2 (Base + Atratividade do Cardápio)": {
-        "usar_clima": False,
-        "usar_cardapio": True,
-        "usar_nutri": False,
-        "mae_t1": 25.26,
-        "mae_t2": 25.78,
-        "descricao": "Cenário 1 + Efeito de atratividade das carnes (bovina, aves, suíno, peixe) e técnicas culinárias"
-    },
-    "Cenário 1 (Histórico + Calendário — Base Pura)": {
+    "Cenário 1 = Consumo Histórico + Calendário": {
         "usar_clima": False,
         "usar_cardapio": False,
         "usar_nutri": False,
         "mae_t1": 25.52,
         "mae_t2": 25.60,
-        "descricao": "Base pura operacional: inércia do consumo recente e ritmo letivo escolar (sem cardápio, clima ou nutricionista)"
+        "descricao": "Base Pura Operacional: inércia do consumo recente (médias móveis e defasagens) e ritmo letivo escolar (sem cardápio, clima ou nutricionista)."
+    },
+    "Cenário 2 = Cenário 1 + Cardápio": {
+        "usar_clima": False,
+        "usar_cardapio": True,
+        "usar_nutri": False,
+        "mae_t1": 25.26,
+        "mae_t2": 25.78,
+        "descricao": "Cenário 1 + Efeito de atratividade das carnes (bovina, aves, suína, peixe) e técnicas culinárias do prato principal."
+    },
+    "Cenário 3 = Cenário 2 + Clima": {
+        "usar_clima": True,
+        "usar_cardapio": True,
+        "usar_nutri": False,
+        "mae_t1": 25.27,
+        "mae_t2": 26.07,
+        "descricao": "Cenário 2 + Previsão meteorológica de satélite Open-Meteo (volume de chuva em mm e temperatura máxima em °C)."
+    },
+    "Cenário 4 = Cenário 3 + Quantitativo Institucional": {
+        "usar_clima": True,
+        "usar_cardapio": True,
+        "usar_nutri": True,
+        "mae_t1": 20.20,
+        "mae_t2": 26.91,
+        "descricao": "Cenário 3 + Meta e planejamento informado pela gestão/nutricionista da escola (exclusivo para ordem de preparo t+1, MAE 20,20 ref)."
     }
 }
 
@@ -325,7 +325,7 @@ def obter_modelos_treinados():
 
 def executar_pipeline_previsao(
     horizonte_alvo="todos",
-    cenario_escolhido="Cenário 4 (Integração Nutricionista / Modelo Híbrido)",
+    cenario_escolhido="Cenário 4 = Cenário 3 + Quantitativo Institucional",
     usar_clima=True,
     usar_cardapio=True,
     usar_nutri=True,
@@ -344,7 +344,9 @@ def executar_pipeline_previsao(
         usar_nutri = CENARIOS_DICT[cenario_escolhido].get("usar_nutri", True)
     else:
         for k, v in CENARIOS_DICT.items():
-            if k.split("(")[0].strip() == str(cenario_escolhido).split("(")[0].strip():
+            prefix_k = k.split("=")[0].split(":")[0].strip()
+            prefix_input = str(cenario_escolhido).split("=")[0].split(":")[0].split("(")[0].strip()
+            if prefix_k == prefix_input:
                 usar_clima = v["usar_clima"]
                 usar_cardapio = v["usar_cardapio"]
                 usar_nutri = v.get("usar_nutri", True)
@@ -642,7 +644,7 @@ def executar_pipeline_previsao(
 def simular_previsao_data(
     data_alvo,
     objetivo="consumo",
-    cenario_escolhido="Cenário 4 (Integração Nutricionista / Modelo Híbrido)",
+    cenario_escolhido="Cenário 4 = Cenário 3 + Quantitativo Institucional",
     modelo_escolhido="Modelo Híbrido (IA + Nutricionista)",
     tipo_margem="Conformal P85 (+18 ref / Padrão Pesquisa)",
     margem_customizada=0.0,
@@ -750,7 +752,16 @@ def simular_previsao_data(
     consumo_real = float(row_fato.iloc[0]["consumo"]) if not row_fato.empty and pd.notna(row_fato.iloc[0].get("consumo")) and float(row_fato.iloc[0]["consumo"]) > 0 else None
 
     # 3. Configuração do Cenário
-    cen_cfg = CENARIOS_DICT.get(cenario_escolhido, list(CENARIOS_DICT.values())[0])
+    if cenario_escolhido in CENARIOS_DICT:
+        cen_cfg = CENARIOS_DICT[cenario_escolhido]
+    else:
+        cen_cfg = list(CENARIOS_DICT.values())[-1]
+        for k, v in CENARIOS_DICT.items():
+            prefix_k = k.split("=")[0].split(":")[0].strip()
+            prefix_input = str(cenario_escolhido).split("=")[0].split(":")[0].split("(")[0].strip()
+            if prefix_k == prefix_input:
+                cen_cfg = v
+                break
     usar_clima = cen_cfg["usar_clima"]
     usar_cardapio = cen_cfg["usar_cardapio"]
     usar_nutri = cen_cfg.get("usar_nutri", True) and (objetivo == "consumo")

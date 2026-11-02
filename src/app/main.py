@@ -2170,7 +2170,7 @@ elif pagina_ativa == "Previsões":
     with st.expander("Ajuste Fino de Algoritmos e Margens de Segurança (Opcional)", expanded=False):
         col_c1, col_c2, col_c3 = st.columns(3)
         with col_c1:
-            cenario_t1 = st.selectbox("Cenário de Features:", list(CENARIOS_DICT.keys()), index=0, key="cfg_cen_t1")
+            cenario_t1 = st.selectbox("Cenário de Dados (Ablation Study):", list(CENARIOS_DICT.keys()), index=len(CENARIOS_DICT)-1, key="cfg_cen_t1")
             st.caption(f"{CENARIOS_DICT[cenario_t1]['descricao']}")
         with col_c2:
             modelo_t1 = st.selectbox("Algoritmo Ativo:", list(MODELOS_RANKING.keys()), index=0, key="cfg_mod_t1")
@@ -2414,18 +2414,26 @@ elif pagina_ativa == "Simulador de Cenários":
             )
             obj_chave = "consumo" if "Consumo" in objetivo_sel else "compras"
             
+            # Se o objetivo for Compras (t+2), Cenário 4 não se aplica (Zero Leakage: sem quantitativo institucional antecipado)
+            if obj_chave == "compras":
+                opcoes_cenarios = [c for c in CENARIOS_DICT.keys() if "Cenário 4" not in c]
+                opcoes_modelos = [m for m in MODELOS_RANKING.keys() if "Híbrido" not in m and "Manual" not in m]
+            else:
+                opcoes_cenarios = list(CENARIOS_DICT.keys())
+                opcoes_modelos = list(MODELOS_RANKING.keys())
+                
             cenario_sel = st.selectbox(
                 "Cenário de Dados (Ablation Study):",
-                list(CENARIOS_DICT.keys()),
-                index=0 if obj_chave == "consumo" else 1,
+                opcoes_cenarios,
+                index=len(opcoes_cenarios) - 1,
                 key="sim_cenario_select"
             )
             st.caption(f"ℹ️ {CENARIOS_DICT[cenario_sel]['descricao']}")
             
             modelo_sel = st.selectbox(
-                "Modelo ou Forma de Previsão:",
-                list(MODELOS_RANKING.keys()),
-                index=0 if obj_chave == "consumo" else 3,
+                "Modelo ou Algoritmo Preditivo:",
+                opcoes_modelos,
+                index=0,
                 key="sim_modelo_select"
             )
             st.caption(f"💡 **Como funciona:** {MODELOS_RANKING[modelo_sel]['detalhe']}")
@@ -2768,7 +2776,7 @@ elif pagina_ativa == "Compras & Suprimentos":
                 key="cfg_mar_sup"
             )
 
-    cenario_sup = "Cenário 4 (Integração Nutricionista / Modelo Híbrido)" if "Híbrido" in modelo_sup else "Cenário 3 (Base + Cardápio + Clima Open-Meteo)"
+    cenario_sup = "Cenário 4 = Cenário 3 + Quantitativo Institucional" if "Híbrido" in modelo_sup else "Cenário 3 = Cenário 2 + Clima"
     modelo_nome_exec = "Modelo Híbrido (IA + Nutricionista)" if "Híbrido" in modelo_sup else "Modelo Matemático Estável (Ridge)"
 
     df_t2, df_feat_t2 = executar_pipeline_previsao(
