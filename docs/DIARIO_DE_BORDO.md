@@ -225,3 +225,19 @@
   3. **Saídas:** os cinco notebooks passaram a ser salvos com as tabelas e figuras.
 * **Decisões Técnicas Registradas:**
   * *Decisão:* As Figuras 03 a 12 continuam descrevendo dias regulares, o que está declarado no notebook 03.
+
+---
+
+### [Entrada #010] – 02/11/2026: Torneio Único, Seleção por Horizonte e Congelamento
+* **Contexto:** o artefato passou a escolher o melhor modelo no melhor cenário com dados retrospectivos, em vez de usar um modelo definido à parte.
+* **Ações Executadas:**
+  1. **Torneio:** passou a ter 20 algoritmos e 154 configurações, com KNN, SVR, MLP, Árvore de Decisão e Bagging de Árvores rodando junto com os demais.
+  2. **Seleção (`src/core/selecao.py`):** em cada horizonte, vence o menor MAE de Fev-Ago/2026, com RMSE como desempate. No $T+1$ concorrem modelos isolados de C1 a C4 e híbridos 50/50 de C1 a C3. No $T+2$ concorrem modelos isolados de C1 a C3.
+  3. **Resultado:** Híbrido 50/50 com Ridge no Cenário 2 (MAE 22,08) e ExtraTrees no Cenário 1 (MAE 27,93).
+  4. **Congelamento:** usa a configuração do torneio e os 12 meses anteriores a 01/09/2026, sem a especificação separada usada antes.
+  5. **Aplicativo e Notebooks:** passaram a ler a seleção de `selecao_modelos.json`. O notebook 04 ganhou a seção de seleção.
+  6. **Testes:** a escolha não muda com Set-Out corrompido, as compras não concorrem com quantitativo e o congelamento não usa dados a partir de 01/09.
+* **Decisões Técnicas Registradas:**
+  * *Decisão:* a escolha usa só Fev-Ago. O resultado de Set-Out não altera os modelos, mesmo quando outra configuração teria número melhor.
+  * *Registro:* as métricas de Set-Out são reprocessadas. Não há previsão guardada em agosto com estes modelos.
+

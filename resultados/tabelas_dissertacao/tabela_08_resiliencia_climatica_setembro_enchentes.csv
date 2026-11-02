@@ -1,9 +1,9 @@
 ﻿Recorte;Metodo;n_dias;MAE;RMSE;R2;WAPE_pct;Sobra_Total_ref;Deficit_Total_ref;Dias_com_Deficit;Taxa_Deficit_pct;Dias_com_Sobra;Taxa_Sobra_pct;Saldo_Operacional_ref;Custo_Potencial_Sobras_RS
 Dias sem evento registrado (N=11);Nutricionista Institucional;11;11.0;15.37;0.24;5.36;110;11;3 (27.3%);27.3;8 (72.7%);72.7;99;1540.0
-Dias sem evento registrado (N=11);ExtraTrees Congelado em 31/08;11;11.91;14.56;0.318;5.81;31;100;8 (72.7%);72.7;2 (18.2%);18.2;-69;434.0
-Dias sem evento registrado (N=11);Híbrido 50/50 Congelado;11;8.45;11.2;0.596;4.12;55;38;6 (54.5%);54.5;4 (36.4%);36.4;17;770.0
-Dias sem evento registrado (N=11);Híbrido Congelado + Margem P85;11;22.55;25.13;-1.033;10.99;248;0;0 (0.0%);0.0;11 (100.0%);100.0;248;3472.0
+Dias sem evento registrado (N=11);IA Congelada em 31/08;11;13.64;17.51;0.013;6.65;26;124;6 (54.5%);54.5;5 (45.5%);45.5;-98;364.0
+Dias sem evento registrado (N=11);Híbrido 50/50 Congelado;11;8.91;11.14;0.6;4.34;51;47;4 (36.4%);36.4;6 (54.5%);54.5;4;714.0
+Dias sem evento registrado (N=11);Híbrido Congelado + Margem P85;11;21.36;24.09;-0.869;10.42;235;0;0 (0.0%);0.0;11 (100.0%);100.0;235;3290.0
 Dias de enchente (N=5);Nutricionista Institucional;5;136.6;151.93;-9.282;188.67;683;0;0 (0.0%);0.0;5 (100.0%);100.0;683;9562.0
-Dias de enchente (N=5);ExtraTrees Congelado em 31/08;5;122.0;135.95;-7.233;168.51;610;0;0 (0.0%);0.0;5 (100.0%);100.0;610;8540.0
-Dias de enchente (N=5);Híbrido 50/50 Congelado;5;129.6;144.16;-8.257;179.01;648;0;0 (0.0%);0.0;5 (100.0%);100.0;648;9072.0
-Dias de enchente (N=5);Híbrido Congelado + Margem P85;5;150.6;163.3;-10.878;208.01;753;0;0 (0.0%);0.0;5 (100.0%);100.0;753;10542.0
+Dias de enchente (N=5);IA Congelada em 31/08;5;102.4;120.58;-5.476;141.44;512;0;0 (0.0%);0.0;5 (100.0%);100.0;512;7168.0
+Dias de enchente (N=5);Híbrido 50/50 Congelado;5;119.8;136.01;-7.24;165.47;599;0;0 (0.0%);0.0;5 (100.0%);100.0;599;8386.0
+Dias de enchente (N=5);Híbrido Congelado + Margem P85;5;140.8;154.83;-9.677;194.48;704;0;0 (0.0%);0.0;5 (100.0%);100.0;704;9856.0

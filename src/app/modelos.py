@@ -1,8 +1,8 @@
 """Modelos auditados servidos pelo aplicativo.
 
-T+1 usa o Híbrido 50/50 (ExtraTrees Cenário 2 + quantitativo institucional) e T+2 usa o ExtraTrees
-Cenário 2, sem quantitativo. Os modelos ficam congelados com dados até 31/08/2026, com a especificação
-da pesquisa. No simulador, datas anteriores a 01/09/2026 são refeitas em walk-forward até a sexta de corte.
+Os modelos de cada horizonte vêm da seleção feita em Fev-Ago/2026 (resultados/modelos/selecao_modelos.json)
+e ficam congelados com dados até 31/08/2026, com a configuração do torneio. O T+2 nunca usa o quantitativo.
+No simulador, datas anteriores a 01/09/2026 são refeitas em walk-forward até a sexta de corte.
 """
 import os
 import sys
@@ -25,9 +25,10 @@ except Exception:
         return fn
 
 from src.core.bronze_silver import padronizar_texto
-from src.core.config import GOLD, HORIZONTES, RESULTADOS, SEMENTE_ALEATORIA
+from src.core.config import GOLD, HORIZONTES, RESULTADOS
 from src.core.gold_features import construir_emissao, origem_da_janela
-from src.core.safety_margins import FIM_TREINO_CONGELADO, combinar_hibrido
+from src.core.safety_margins import POLITICA_HIBRIDO, POLITICA_IA
+from src.core.selecao import FIM_TREINO_CONGELADO, carregar_selecao, combinar_hibrido, nome_modelo, treinar_congelado
 
 CENARIOS_CORE = {
     1: "Cenario_1_Base_Cardapio",
@@ -99,19 +100,13 @@ def colunas_do_cenario(horizonte: str, cenario: int) -> list:
 
 @cache_resource
 def modelo_congelado(horizonte: str, cenario: int):
-    """Treina o ExtraTrees congelado da pesquisa com dados até 31/08/2026."""
-    from sklearn.ensemble import ExtraTreesRegressor
-    from src.core.models import criar_pipeline_arvore
-    gold = carregar_gold(horizonte)
-    cols = colunas_do_cenario(horizonte, cenario)
-    treino = gold[(gold["data"] < FIM_TREINO_CONGELADO) & (gold["ano"] >= 2025) & gold["usar_no_treino"] & gold["consumo"].notna()]
-    modelo = criar_pipeline_arvore(ExtraTreesRegressor(n_estimators=80, min_samples_leaf=5, random_state=SEMENTE_ALEATORIA, n_jobs=1))
-    return modelo.fit(treino[cols], treino["alvo_relativo"].clip(*LIMITES_ALVO))
+    """Treina o modelo escolhido para o horizonte com dados até 31/08/2026."""
+    return treinar_congelado(carregar_gold(horizonte), carregar_selecao()[horizonte]["algoritmo"], colunas_do_cenario(horizonte, cenario))
 
 
 @cache_resource
 def modelo_walk_forward(horizonte: str, cenario: int, origem: pd.Timestamp):
-    """Treina o ExtraTrees do torneio apenas com dias anteriores à sexta de corte."""
+    """Treina o modelo escolhido para o horizonte apenas com dias anteriores à sexta de corte."""
     from src.core.models import obter_catalogo_modelos
     gold = carregar_gold(horizonte)
     cols = colunas_do_cenario(horizonte, cenario)
@@ -121,7 +116,7 @@ def modelo_walk_forward(horizonte: str, cenario: int, origem: pd.Timestamp):
     ]
     if len(treino) < 20:
         return None
-    modelo = obter_catalogo_modelos()["Ensemble_Bagging_ExtraTrees"]["construtor"]()
+    modelo = obter_catalogo_modelos()[carregar_selecao()[horizonte]["algoritmo"]]["construtor"]()
     return modelo.fit(treino[cols], treino["alvo_relativo"].clip(*LIMITES_ALVO))
 
 
@@ -153,15 +148,16 @@ def carregar_margens() -> dict:
     """Lê as margens por quantil calibradas em Fev-Ago e deriva as do T+2 pelo mesmo método."""
     tabela = pd.read_csv(RESULTADOS / "tabelas_dissertacao" / "tabela_09_margens_empiricas_quantis.csv", sep=";", encoding="utf-8-sig")
     preds = pd.read_parquet(RESULTADOS / "modelos" / "predicoes_detalhadas_torneio.parquet")
+    ref = carregar_selecao()["t2"]
     t2 = preds[
-        (preds["horizonte"] == "t2") & (preds["cenario"] == CENARIOS_CORE[2]) & (preds["algoritmo"] == "Ensemble_Bagging_ExtraTrees") &
+        (preds["horizonte"] == "t2") & (preds["cenario"] == ref["cenario"]) & (preds["algoritmo"] == ref["algoritmo"]) &
         (preds["data"] >= "2026-02-01") & (preds["data"] <= "2026-08-31")
     ]
     residuos = t2["consumo_real"] - t2["previsao"]
     margens = {}
     for nome, q in QUANTIS:
-        ia = tabela[(tabela["Politica"] == "IA Pura (ExtraTrees)") & (tabela["Quantil"] == nome)].iloc[0]
-        hib = tabela[(tabela["Politica"] == "Modelo Híbrido 50/50") & (tabela["Quantil"] == nome)].iloc[0]
+        ia = tabela[(tabela["Politica"] == POLITICA_IA) & (tabela["Quantil"] == nome)].iloc[0]
+        hib = tabela[(tabela["Politica"] == POLITICA_HIBRIDO) & (tabela["Quantil"] == nome)].iloc[0]
         margens[nome] = {
             "ia": float(ia["Margem_ref"]),
             "hibrido": float(hib["Margem_ref"]),
@@ -172,7 +168,16 @@ def carregar_margens() -> dict:
     return margens
 
 
+def cenario_oficial(horizonte: str) -> int:
+    """Número do cenário escolhido na seleção para o horizonte."""
+    return next(n for n, nome in CENARIOS_CORE.items() if nome == carregar_selecao()[horizonte]["cenario"])
+
+
+def nome_do_modelo(horizonte: str) -> str:
+    return nome_modelo(carregar_selecao()[horizonte]["algoritmo"])
+
+
 __all__ = [
     "atributos_da_emissao", "carregar_gold", "carregar_margens", "colunas_do_cenario", "combinar_hibrido", "FIM_TREINO_CONGELADO",
-    "linha_arquivada", "modelo_congelado", "modelo_walk_forward", "origem_da_data", "prever"
+    "linha_arquivada", "modelo_congelado", "modelo_walk_forward", "nome_do_modelo", "cenario_oficial", "origem_da_data", "prever"
 ]

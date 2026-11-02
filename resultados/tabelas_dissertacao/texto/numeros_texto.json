@@ -40,7 +40,7 @@
     "Custo": 35854.0
   },
   "n_configuracoes": 154,
-  "margem_t2_p85": 37.0,
+  "margem_t2_p85": 36.0,
   "eda_dia_2325": {
     "0": 139.5,
     "1": 132.0,
@@ -218,7 +218,7 @@
     ]
   ],
   "fronteira_min": {
-    "peso_ia": 0.4,
-    "MAE": 23.6
+    "peso_ia": 0.45,
+    "MAE": 21.95
   }
 }

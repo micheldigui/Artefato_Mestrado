@@ -36,7 +36,13 @@ from matplotlib.ticker import FuncFormatter
 
 from src.core.config import GOLD, RESULTADOS, SEMENTE_ALEATORIA, SILVER
 from src.core.models import definir_cenarios_features, obter_catalogo_modelos, avaliar_um_algoritmo
-from src.core.safety_margins import combinar_hibrido, prever_com_modelo_congelado
+from src.core.safety_margins import POLITICA_IA, combinar_hibrido, prever_com_modelo_congelado
+from src.core.selecao import carregar_selecao, nome_modelo
+
+SELECAO = carregar_selecao()
+ALG_T1, CEN_T1 = SELECAO["t1"]["algoritmo"], SELECAO["t1"]["cenario"]
+ALG_T2, CEN_T2 = SELECAO["t2"]["algoritmo"], SELECAO["t2"]["cenario"]
+NOME_T1, NOME_T2 = nome_modelo(ALG_T1), nome_modelo(ALG_T2)
 
 PASTA_FIG = RESULTADOS / "figuras" / "dissertacao_texto"
 PASTA_TAB = RESULTADOS / "tabelas_dissertacao" / "texto"
@@ -151,24 +157,24 @@ cenarios = torneio.sort_values("MAE").groupby(["Horizonte", "Cenario"], as_index
 cenarios.to_csv(PASTA_TAB / "melhor_por_cenario.csv", sep=";", index=False)
 familias = ml[ml["Horizonte"] == "T+1"].sort_values("MAE").groupby("Familia", as_index=False).first().sort_values("MAE")
 familias.to_csv(PASTA_TAB / "melhor_por_familia_t1.csv", sep=";", index=False)
-ref_c = torneio[(torneio["Modelo"] == "ExtraTrees") & (torneio["Horizonte"] == "T+1")].set_index("Cenario")
-ref_c.to_csv(PASTA_TAB / "extratrees_por_cenario_t1.csv", sep=";")
+ref_c = torneio[(torneio["Modelo"] == NOME_T1) & (torneio["Horizonte"] == "T+1")].set_index("Cenario")
+ref_c.to_csv(PASTA_TAB / "modelo_base_por_cenario_t1.csv", sep=";")
 NUM["n_configuracoes"] = int(len(torneio))
 display(top_t1.round(2)); display(top_t2.round(2)); display(cenarios.round(2))
 """)
 
 code("""
 # Retrospectivo e prospectivo: políticas do T+1
-base_fa = fa[(fa["horizonte"] == "t1") & (fa["cenario"] == "Cenario_2_Com_Cardapio") & (fa["algoritmo"] == "Ensemble_Bagging_ExtraTrees")].sort_values("data")
+base_fa = fa[(fa["horizonte"] == "t1") & (fa["cenario"] == CEN_T1) & (fa["algoritmo"] == ALG_T1)].sort_values("data")
 base_fa = base_fa.merge(fato[["data", "plano_nutricionista"]], on="data")
 y, ia, nu = base_fa["consumo_real"].values, base_fa["previsao"].values, base_fa["plano_nutricionista"].values
 hi = combinar_hibrido(ia, nu)
 marg = pd.read_csv(RESULTADOS / "tabelas_dissertacao" / "tabela_09_margens_empiricas_quantis.csv", sep=";")
 m = {(r["Politica"], r["Quantil"]): r["Margem_ref"] for _, r in marg.iterrows()}
-MIA, MHI = "IA Pura (ExtraTrees)", "Modelo Híbrido 50/50"
-pol_defs = [("Nutricionista", nu, 0), ("ExtraTrees", ia, 0), ("Híbrido 50/50", hi, 0)]
+MIA, MHI = POLITICA_IA, "Modelo Híbrido 50/50"
+pol_defs = [("Nutricionista", nu, 0), (NOME_T1, ia, 0), ("Híbrido 50/50", hi, 0)]
 for q in ("P75", "P85", "P90"):
-    pol_defs += [(f"ExtraTrees + {q}", ia, m[(MIA, q)]), (f"Híbrido + {q}", hi, m[(MHI, q)])]
+    pol_defs += [(f"{NOME_T1} + {q}", ia, m[(MIA, q)]), (f"Híbrido + {q}", hi, m[(MHI, q)])]
 retro = pd.DataFrame([{"Politica": n, "Margem": mg, **metricas(y, p + mg)} for n, p, mg in pol_defs])
 retro.to_csv(PASTA_TAB / "retro_politicas.csv", sep=";", index=False)
 
@@ -177,31 +183,30 @@ te["sem_evento"] = ~te["evento_registrado"]
 linhas = []
 for recorte, s in (("33 dias", te), ("28 dias sem evento", te[te["sem_evento"]]), ("5 dias de enchente", te[te["eh_crise_climatica"]]),
                    ("Setembro", te[te["data"].dt.month == 9]), ("Outubro", te[te["data"].dt.month == 10])):
-    for nome, p, mg in [("Nutricionista", s["plano_nutricionista"], 0), ("ExtraTrees congelado", s["previsao_ia"], 0), ("Híbrido congelado", s["previsao_hibrido"], 0),
-                        ("Híbrido + P85", s["previsao_hibrido"], m[(MHI, "P85")]), ("ExtraTrees + P85", s["previsao_ia"], m[(MIA, "P85")])]:
+    for nome, p, mg in [("Nutricionista", s["plano_nutricionista"], 0), (f"{NOME_T1} congelado", s["previsao_ia"], 0), ("Híbrido congelado", s["previsao_hibrido"], 0),
+                        ("Híbrido + P85", s["previsao_hibrido"], m[(MHI, "P85")]), (f"{NOME_T1} + P85", s["previsao_ia"], m[(MIA, "P85")])]:
         linhas.append({"Recorte": recorte, "Metodo": nome, **metricas(s["consumo"], p + mg)})
 prosp = pd.DataFrame(linhas)
 prosp.to_csv(PASTA_TAB / "prospectivo_metodos.csv", sep=";", index=False)
 
 # T+2 no período prospectivo
-cols2 = [c for c in definir_cenarios_features()["Cenario_2_Com_Cardapio"] if c in g2.columns]
-t2 = prever_com_modelo_congelado(g2, cols2)
+cols2 = [c for c in definir_cenarios_features()[CEN_T2] if c in g2.columns]
+t2 = prever_com_modelo_congelado(g2, cols2, ALG_T2)
 t2["ev"] = t2["data"].isin(ATIP)
-ret_t2 = fa[(fa["horizonte"] == "t2") & (fa["cenario"] == "Cenario_2_Com_Cardapio") & (fa["algoritmo"] == "Ensemble_Bagging_ExtraTrees")]
+ret_t2 = fa[(fa["horizonte"] == "t2") & (fa["cenario"] == CEN_T2) & (fa["algoritmo"] == ALG_T2)]
 marg_t2 = float(max(0, np.ceil(np.quantile(ret_t2["consumo_real"] - ret_t2["previsao"], 0.85))))
 pt2 = pd.DataFrame([
-    {"Recorte": "Fev-Ago (walk-forward)", "Metodo": "ExtraTrees", **metricas(ret_t2["consumo_real"], ret_t2["previsao"])},
-    {"Recorte": "Set-Out, 33 dias", "Metodo": "ExtraTrees congelado", **metricas(t2["consumo"], t2["previsao_ia"])},
-    {"Recorte": "Set-Out, 28 dias", "Metodo": "ExtraTrees congelado", **metricas(t2.loc[~t2["ev"], "consumo"], t2.loc[~t2["ev"], "previsao_ia"])},
-    {"Recorte": "Set-Out, 33 dias", "Metodo": "ExtraTrees + P85", **metricas(t2["consumo"], t2["previsao_ia"] + marg_t2)}
+    {"Recorte": "Fev-Ago (walk-forward)", "Metodo": NOME_T2, **metricas(ret_t2["consumo_real"], ret_t2["previsao"])},
+    {"Recorte": "Set-Out, 33 dias", "Metodo": f"{NOME_T2} congelado", **metricas(t2["consumo"], t2["previsao_ia"])},
+    {"Recorte": "Set-Out, 28 dias", "Metodo": f"{NOME_T2} congelado", **metricas(t2.loc[~t2["ev"], "consumo"], t2.loc[~t2["ev"], "previsao_ia"])},
+    {"Recorte": "Set-Out, 33 dias", "Metodo": f"{NOME_T2} + P85", **metricas(t2["consumo"], t2["previsao_ia"] + marg_t2)}
 ])
 pt2.to_csv(PASTA_TAB / "t2_compras.csv", sep=";", index=False)
 NUM["margem_t2_p85"] = marg_t2
 
 # Sensibilidade à janela de treino em Fev-Ago
-from sklearn.ensemble import ExtraTreesRegressor
-from src.core.models import criar_pipeline_arvore, LIMITES_ALVO, arredondar_refeicoes
-cols = [c for c in definir_cenarios_features()["Cenario_2_Com_Cardapio"] if c in g1.columns]
+from src.core.models import LIMITES_ALVO, arredondar_refeicoes
+cols = [c for c in definir_cenarios_features()[CEN_T1] if c in g1.columns]
 alvo = g1[(g1["data"] >= "2026-02-01") & (g1["data"] <= "2026-08-31") & g1["consumo"].notna()]
 linhas = []
 for meses, rotulo in ((6, "6 meses"), (12, "12 meses"), (24, "24 meses"), (None, "Todo o histórico")):
@@ -210,7 +215,7 @@ for meses, rotulo in ((6, "6 meses"), (12, "12 meses"), (24, "24 meses"), (None,
         tr = g1[(g1["data"] < o) & g1["usar_no_treino"] & g1["consumo"].notna() & g1["alvo_relativo"].notna()]
         if meses:
             tr = tr[tr["data"] >= o - pd.DateOffset(months=meses)]
-        modelo = criar_pipeline_arvore(ExtraTreesRegressor(n_estimators=80, min_samples_leaf=5, max_features=0.6, random_state=SEMENTE_ALEATORIA, n_jobs=-1))
+        modelo = obter_catalogo_modelos()[ALG_T1]["construtor"]()
         modelo.fit(tr[cols], tr["alvo_relativo"].clip(*LIMITES_ALVO))
         saidas.append(a.assign(p=arredondar_refeicoes(np.clip(modelo.predict(a[cols]), *LIMITES_ALVO) * a["nivel_base"].values)))
     s = pd.concat(saidas)
@@ -266,7 +271,7 @@ for x, y0, t, ls, c in [
     (0.01, 0.55, "Fontes", ["Consumo registrado", "Reservas e quantitativo", "Cardápio e calendário", "Clima previsto e observado"], COR_NEUTRA),
     (0.35, 0.55, "Bronze e Silver", ["Arquivos preservados", "Base diária integrada", "Classificação de dias atípicos"], COR_IA),
     (0.69, 0.55, "Gold", ["Atributos por sexta de corte", "Base T+1 e base T+2", "Efeitos de cardápio causais"], COR_IA),
-    (0.69, 0.02, "Modelos", ["Torneio walk-forward", "ExtraTrees congelado", "Auditoria de vazamento"], COR_HIB),
+    (0.69, 0.02, "Modelos", ["Torneio walk-forward", "Modelos congelados em 31/08", "Auditoria de vazamento"], COR_HIB),
     (0.35, 0.02, "Decisão", ["Híbrido 50/50 no preparo", "Margens por quantil", "Sobra e déficit potenciais"], COR_HIB),
     (0.01, 0.02, "Aplicativo", ["Painel do histórico", "Previsões e simulador", "Cadastro de dados"], COR_NUTRI),
 ]:
@@ -310,7 +315,7 @@ fig, ax = tela(8.2, 7.2)
 for x, y0, t, ls, c in [
     (0.03, 0.60, "1. Dados", ["Consumo, cardápio, calendário", "Quantitativo institucional", "Previsão de clima (Open-Meteo)"], COR_IA),
     (0.53, 0.60, "2. Atributos", ["Nível recente e mesmo dia da semana", "Blocos letivos e eventos", "Efeitos históricos do cardápio"], COR_IA),
-    (0.53, 0.25, "3. Previsão", ["T+1 e T+2 com ExtraTrees", "Modelo congelado em 31/08/2026", "Previsão preservada antes da margem"], COR_HIB),
+    (0.53, 0.25, "3. Previsão", [f"T+1 com híbrido {NOME_T1}, T+2 com {NOME_T2}", "Modelo congelado em 31/08/2026", "Previsão preservada antes da margem"], COR_HIB),
     (0.03, 0.25, "4. Decisão", ["Híbrido 50/50 no preparo", "Margens P75, P85 e P90", "Sobra, déficit e custo potenciais"], COR_HIB),
 ]:
     caixa(ax, x, y0, 0.44, 0.33, t, ls, c, 8.6)
@@ -323,7 +328,7 @@ fig, ax = tela(9.6, 3.8)
 LARG, PASSO, X0 = 0.2, 0.248, 0.012
 for i, (t_, ls, c) in enumerate([
     ("Sexta à tarde", ["Consumo da semana", "Cardápio e calendário", "Previsão de clima"], COR_NEUTRA),
-    ("Compras (T+2)", ["Semana após a próxima", "10 a 14 dias", "ExtraTrees"], COR_NUTRI),
+    ("Compras (T+2)", ["Semana após a próxima", "10 a 14 dias", NOME_T2], COR_NUTRI),
     ("Preparo (T+1)", ["Próxima semana", "3 a 7 dias", "Híbrido 50/50"], COR_HIB),
     ("Saídas para a gestão", ["Quantidade diária", "Margem de segurança", "Decisão da equipe"], COR_IA),
 ]):
@@ -545,7 +550,7 @@ code("""
 # Figura 25
 hib_serie = pd.Series(hi, index=base_fa["data"])
 fig, axes = plt.subplots(3, 1, figsize=(9.4, 6.0), sharex=True, sharey=True)
-for ax, (nome, p, cor) in zip(axes, (("Nutricionista", nu, COR_NUTRI), ("ExtraTrees", ia, COR_IA), ("Híbrido 50/50", hi, COR_HIB))):
+for ax, (nome, p, cor) in zip(axes, (("Nutricionista", nu, COR_NUTRI), (NOME_T1, ia, COR_IA), ("Híbrido 50/50", hi, COR_HIB))):
     ax.plot(base_fa["data"], y, color=COR_REAL, lw=1.1, label="Consumo registrado")
     ax.plot(base_fa["data"], p, color=cor, lw=1.5, label=nome)
     ax.legend(loc="lower left", ncol=2, fontsize=8.5); ax.set_ylabel("Refeições")
@@ -556,7 +561,7 @@ fr = pd.read_csv(RESULTADOS / "tabelas_dissertacao" / "tabela_fronteira_modelo_h
 fig, ax = plt.subplots(figsize=(7.2, 3.4))
 ax.plot(fr["peso_ia"], fr["MAE"], color=COR_IA, marker="o", ms=3.5)
 ax.axvline(0.5, color=COR_HIB, ls="--", lw=1.2); ax.text(0.51, fr["MAE"].max(), "50/50", color=COR_REAL, fontsize=9, va="top")
-ax.set_xlabel("Peso do ExtraTrees na combinação"); ax.set_ylabel("MAE (refeições)"); eixo_br(ax, "x", 1); eixo_br(ax, "y", 1)
+ax.set_xlabel(f"Peso do {NOME_T1} na combinação"); ax.set_ylabel("MAE (refeições)"); eixo_br(ax, "x", 1); eixo_br(ax, "y", 1)
 salvar(fig, "figura_26_fronteira_hibrido")
 NUM["fronteira_min"] = fr.sort_values("MAE").iloc[0][["peso_ia", "MAE"]].to_dict()
 
@@ -573,11 +578,11 @@ def fig_sd(tab, nomes, rotulos, arquivo):
     salvar(fig, arquivo)
 
 
-fig_sd(retro, ["Nutricionista", "ExtraTrees", "Híbrido 50/50", "Híbrido + P75", "Híbrido + P85", "Híbrido + P90"], ["Nutricionista", "ExtraTrees", "Híbrido", "Híbrido\\n+ P75", "Híbrido\\n+ P85", "Híbrido\\n+ P90"], "figura_27_sobra_deficit_retrospectivo")
+fig_sd(retro, ["Nutricionista", NOME_T1, "Híbrido 50/50", "Híbrido + P75", "Híbrido + P85", "Híbrido + P90"], ["Nutricionista", NOME_T1, "Híbrido", "Híbrido\\n+ P75", "Híbrido\\n+ P85", "Híbrido\\n+ P90"], "figura_27_sobra_deficit_retrospectivo")
 
 # Figura 28
 fig, ax = plt.subplots(figsize=(7.4, 3.8))
-for nome, cor, mk in (("ExtraTrees", COR_IA, "o"), ("Híbrido", COR_HIB, "s")):
+for nome, cor, mk in ((NOME_T1, COR_IA, "o"), ("Híbrido", COR_HIB, "s")):
     t = retro[retro["Politica"].str.startswith(nome)].sort_values("Margem")
     ax.plot(t["Dias_deficit_pct"], t["Custo"], color=cor, marker=mk, ms=6, label=nome)
     for r in t.itertuples():
@@ -595,7 +600,7 @@ code("""
 fig, (a1, a2) = plt.subplots(2, 1, figsize=(9.4, 5.2), sharex=True, gridspec_kw={"height_ratios": [3, 1]})
 a1.plot(te["data"], te["consumo"], color=COR_REAL, marker="o", ms=3.5, lw=1.5, label="Consumo registrado")
 a1.plot(te["data"], te["plano_nutricionista"], color=COR_NUTRI, label="Nutricionista")
-a1.plot(te["data"], te["previsao_ia"], color=COR_IA, label="ExtraTrees congelado")
+a1.plot(te["data"], te["previsao_ia"], color=COR_IA, label=f"{NOME_T1} congelado")
 a1.plot(te["data"], te["previsao_hibrido"], color=COR_HIB, label="Híbrido 50/50")
 for d in te.loc[te["eh_crise_climatica"], "data"]:
     a1.axvspan(d - pd.Timedelta(hours=12), d + pd.Timedelta(hours=12), color="#F3D9C6", zorder=0)
@@ -606,8 +611,8 @@ fig.tight_layout(); salvar(fig, "figura_29_serie_prospectiva")
 # Figura 30
 fig, axes = plt.subplots(1, 2, figsize=(9, 3.4), sharey=True)
 for ax, rc in zip(axes, ("Setembro", "Outubro")):
-    t = prosp[(prosp["Recorte"] == rc) & prosp["Metodo"].isin(["Nutricionista", "ExtraTrees congelado", "Híbrido congelado"])]
-    bb = ax.bar(["Nutricionista", "ExtraTrees", "Híbrido"], t["MAE"], color=[COR_NUTRI, COR_IA, COR_HIB], width=0.62)
+    t = prosp[(prosp["Recorte"] == rc) & prosp["Metodo"].isin(["Nutricionista", f"{NOME_T1} congelado", "Híbrido congelado"])]
+    bb = ax.bar(["Nutricionista", NOME_T1, "Híbrido"], t["MAE"], color=[COR_NUTRI, COR_IA, COR_HIB], width=0.62)
     for r in bb:
         ax.text(r.get_x() + r.get_width() / 2, r.get_height(), br(r.get_height()), ha="center", va="bottom", fontsize=9, color=COR_REAL)
     ax.set_xlabel(f"{rc} (N = {int(t['n'].iloc[0])})")
@@ -615,7 +620,7 @@ axes[0].set_ylabel("MAE (refeições)"); fig.tight_layout(); salvar(fig, "figura
 
 # Figura 31
 t33 = prosp[prosp["Recorte"] == "33 dias"]
-fig_sd(t33, ["Nutricionista", "ExtraTrees congelado", "Híbrido congelado", "Híbrido + P85"], ["Nutricionista", "ExtraTrees\\ncongelado", "Híbrido\\ncongelado", "Híbrido\\n+ P85"], "figura_31_sobra_deficit_prospectivo")
+fig_sd(t33, ["Nutricionista", f"{NOME_T1} congelado", "Híbrido congelado", "Híbrido + P85"], ["Nutricionista", f"{NOME_T1}\\ncongelado", "Híbrido\\ncongelado", "Híbrido\\n+ P85"], "figura_31_sobra_deficit_prospectivo")
 
 # Figura 32
 en = te[te["eh_crise_climatica"]]
@@ -623,7 +628,7 @@ x = np.arange(len(en)); larg = 0.27
 fig, ax = plt.subplots(figsize=(7.8, 3.6))
 ax.bar(x - larg, en["consumo"], larg - 0.02, color=COR_REAL, label="Consumo registrado")
 ax.bar(x, en["plano_nutricionista"], larg - 0.02, color=COR_NUTRI, label="Nutricionista")
-ax.bar(x + larg, en["previsao_ia"], larg - 0.02, color=COR_IA, label="ExtraTrees congelado")
+ax.bar(x + larg, en["previsao_ia"], larg - 0.02, color=COR_IA, label=f"{NOME_T1} congelado")
 ax.set_xticks(x); ax.set_xticklabels(en["data"].dt.strftime("%d/%m")); ax.set_ylabel("Refeições"); ax.legend(loc="upper center", ncol=3, bbox_to_anchor=(0.5, 1.13))
 salvar(fig, "figura_32_enchentes")
 
@@ -631,7 +636,7 @@ salvar(fig, "figura_32_enchentes")
 fig, ax = plt.subplots(figsize=(8.2, 3.8))
 rec = ["Fev-Ago (N=123)", "Set-Out (N=33)", "Set-Out sem evento (N=28)"]
 vals = {"Nutricionista": [retro.set_index("Politica").loc["Nutricionista", "MAE"], prosp[(prosp.Recorte == "33 dias") & (prosp.Metodo == "Nutricionista")]["MAE"].iloc[0], prosp[(prosp.Recorte == "28 dias sem evento") & (prosp.Metodo == "Nutricionista")]["MAE"].iloc[0]],
-        "ExtraTrees": [retro.set_index("Politica").loc["ExtraTrees", "MAE"], prosp[(prosp.Recorte == "33 dias") & (prosp.Metodo == "ExtraTrees congelado")]["MAE"].iloc[0], prosp[(prosp.Recorte == "28 dias sem evento") & (prosp.Metodo == "ExtraTrees congelado")]["MAE"].iloc[0]],
+        NOME_T1: [retro.set_index("Politica").loc[NOME_T1, "MAE"], prosp[(prosp.Recorte == "33 dias") & (prosp.Metodo == f"{NOME_T1} congelado")]["MAE"].iloc[0], prosp[(prosp.Recorte == "28 dias sem evento") & (prosp.Metodo == f"{NOME_T1} congelado")]["MAE"].iloc[0]],
         "Híbrido 50/50": [retro.set_index("Politica").loc["Híbrido 50/50", "MAE"], prosp[(prosp.Recorte == "33 dias") & (prosp.Metodo == "Híbrido congelado")]["MAE"].iloc[0], prosp[(prosp.Recorte == "28 dias sem evento") & (prosp.Metodo == "Híbrido congelado")]["MAE"].iloc[0]]}
 x = np.arange(3); larg = 0.26
 for i, (k, c) in enumerate(zip(vals, (COR_NUTRI, COR_IA, COR_HIB))):

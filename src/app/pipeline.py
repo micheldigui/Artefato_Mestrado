@@ -1,7 +1,7 @@
 """
 Módulo do Pipeline Analítico e Inferência Preditiva
-Serve os modelos auditados da pesquisa: Híbrido 50/50 no T+1 (ExtraTrees Cenário 2 + quantitativo institucional)
-e ExtraTrees Cenário 2 no T+2, com margens empíricas por quantil calibradas em Fev-Ago/2026.
+Serve os modelos escolhidos em Fev-Ago/2026: melhor modelo no melhor cenário de cada horizonte, congelados
+em 31/08/2026, com margens empíricas por quantil calibradas no mesmo período.
 """
 
 import os
@@ -14,14 +14,14 @@ try:
     from clima import obter_previsao_clima_futura, obter_clima_data
     from modelos import (
         FIM_TREINO_CONGELADO, atributos_da_emissao, carregar_gold, carregar_margens, combinar_hibrido, linha_arquivada,
-        modelo_congelado, modelo_walk_forward, origem_da_data, prever
+        modelo_congelado, modelo_walk_forward, nome_do_modelo, cenario_oficial, origem_da_data, prever
     )
 except ImportError:
     from .storage import carregar_planejamento_nutricionista, salvar_predicoes_geradas, carregar_fato_diaria_completa
     from .clima import obter_previsao_clima_futura, obter_clima_data
     from .modelos import (
         FIM_TREINO_CONGELADO, atributos_da_emissao, carregar_gold, carregar_margens, combinar_hibrido, linha_arquivada,
-        modelo_congelado, modelo_walk_forward, origem_da_data, prever
+        modelo_congelado, modelo_walk_forward, nome_do_modelo, cenario_oficial, origem_da_data, prever
     )
 
 DIAS_SEMANA_PT = {
@@ -79,19 +79,21 @@ CENARIOS_DICT = {
         "descricao": "Cenário 3 + quantitativo institucional como atributo. Exclusivo do preparo (T+1)."
     }
 }
-CENARIO_PADRAO = "Cenário 2 = Cenário 1 + Cardápio"
+CENARIO_PADRAO = next(nome for nome, cfg in CENARIOS_DICT.items() if cfg["numero"] == cenario_oficial("t1"))
+CENARIO_COMPRAS = next(nome for nome, cfg in CENARIOS_DICT.items() if cfg["numero"] == cenario_oficial("t2"))
 
-MODELO_HIBRIDO = "Modelo Híbrido (ExtraTrees + Quantitativo Institucional)"
-MODELO_IA = "Inteligência Artificial (ExtraTrees)"
+NOME_PREPARO, NOME_COMPRAS = nome_do_modelo("t1"), nome_do_modelo("t2")
+MODELO_HIBRIDO = f"Modelo Híbrido ({NOME_PREPARO} + Quantitativo Institucional)"
+MODELO_IA = "Inteligência Artificial (Modelo Escolhido)"
 MODELO_MANUAL = "Planejamento Manual da Gestão (Sem IA)"
 MODELOS_RANKING = {
     MODELO_HIBRIDO: {
         "tipo": "Human-in-the-Loop",
-        "detalhe": "Modelo oficial do preparo: combina em partes iguais o ExtraTrees e o quantitativo informado pela nutricionista"
+        "detalhe": f"Modelo oficial do preparo: combina em partes iguais o {NOME_PREPARO} e o quantitativo informado pela nutricionista"
     },
     MODELO_IA: {
         "tipo": "Modelo congelado em 31/08/2026",
-        "detalhe": "Modelo de árvores da pesquisa, sem quantitativo institucional. É o modelo oficial das compras"
+        "detalhe": f"Modelo escolhido sem o quantitativo: {NOME_PREPARO} no preparo e {NOME_COMPRAS} nas compras"
     },
     MODELO_MANUAL: {
         "tipo": "Estimativa Humana da Gestão",
@@ -106,17 +108,17 @@ MARGENS_INFO = {
     MARGEM_PADRAO: {
         "quantil": "P85",
         "cobertura": f"{_MARGENS['P85']['cobertura_hibrido']:.1f}% no híbrido em Fev-Ago".replace(".", ","),
-        "descricao": f"Política padrão: +{_MARGENS['P85']['hibrido']:.0f} ref no híbrido e +{_MARGENS['P85']['ia']:.0f} ref no ExtraTrees"
+        "descricao": f"Política padrão: +{_MARGENS['P85']['hibrido']:.0f} ref no híbrido e +{_MARGENS['P85']['ia']:.0f} ref na IA"
     },
     "Margem P90 (Máxima Proteção)": {
         "quantil": "P90",
         "cobertura": f"{_MARGENS['P90']['cobertura_hibrido']:.1f}% no híbrido em Fev-Ago".replace(".", ","),
-        "descricao": f"Conservadora: +{_MARGENS['P90']['hibrido']:.0f} ref no híbrido e +{_MARGENS['P90']['ia']:.0f} ref no ExtraTrees"
+        "descricao": f"Conservadora: +{_MARGENS['P90']['hibrido']:.0f} ref no híbrido e +{_MARGENS['P90']['ia']:.0f} ref na IA"
     },
     "Margem P75 (Econômica)": {
         "quantil": "P75",
         "cobertura": f"{_MARGENS['P75']['cobertura_hibrido']:.1f}% no híbrido em Fev-Ago".replace(".", ","),
-        "descricao": f"Econômica: +{_MARGENS['P75']['hibrido']:.0f} ref no híbrido e +{_MARGENS['P75']['ia']:.0f} ref no ExtraTrees"
+        "descricao": f"Econômica: +{_MARGENS['P75']['hibrido']:.0f} ref no híbrido e +{_MARGENS['P75']['ia']:.0f} ref na IA"
     },
     MARGEM_SEM: {
         "quantil": None,
@@ -363,7 +365,7 @@ def executar_pipeline_previsao(
         linha = atributos[hz][atributos[hz]["data"] == pd.Timestamp(dt)] if is_letivo and not atributos[hz].empty else pd.DataFrame()
 
         if not linha.empty:
-            cenario_ia = cenario_da_ia(cfg, hz, eh_hibrido)
+            cenario_ia = cenario_oficial(hz) if cfg["numero"] == cenario_oficial("t1") else cenario_da_ia(cfg, hz, eh_hibrido)
             linha = aplicar_entradas(linha, cenario_ia, val_nutri, precip, temp_max)
             pred_ia_base = prever(modelo_congelado(hz, cenario_ia), linha, hz, cenario_ia)
             lag_5, lag_10 = (float(linha[c].iloc[0]) if pd.notna(linha[c].iloc[0]) else 0.0 for c in ("mesmo_dia_ha_1_ocorrencias", "mesmo_dia_ha_2_ocorrencias"))
@@ -388,7 +390,7 @@ def executar_pipeline_previsao(
         if is_letivo and linha.empty:
             alertas.append("Data fora do escopo do modelo (sábado letivo ou histórico insuficiente)")
         if is_letivo and (eh_hibrido or eh_manual) and val_nutri is None:
-            alertas.append("Quantitativo institucional não informado: usando apenas o ExtraTrees")
+            alertas.append(f"Quantitativo institucional não informado: usando apenas o {NOME_PREPARO}")
         if not is_letivo:
             pred_base = 0.0
             margem_valor = 0.0
@@ -404,7 +406,7 @@ def executar_pipeline_previsao(
                 alertas.append(f"Chuva forte prevista ({precip:.1f} mm): avaliar o risco de queda de comparecimento")
             elif precip >= 8.0:
                 alertas.append(f"Chuva prevista ({precip:.1f} mm): risco moderado de evasão")
-            if usar_cardapio:
+            if usar_cardapio and cenario_ia >= 2:
                 if status_cardapio == "Padrão Neutro (Não Cadastrado)":
                     alertas.append("Cardápio não cadastrado: previsão sem o efeito do prato")
                 elif "bovina" in prot or "feijoada" in prato.lower():
@@ -655,7 +657,7 @@ def simular_previsao_data(
         alertas.append(f"Chuva prevista ({chuva_utilizada:.1f} mm): Queda esperada na adesão de alunos.")
 
     if (eh_hibrido or eh_manual) and nutri_utilizado is None and is_letivo_sim:
-        alertas.append("Quantitativo institucional não informado: resultado calculado apenas com o ExtraTrees.")
+        alertas.append(f"Quantitativo institucional não informado: resultado calculado apenas com o {NOME_PREPARO}.")
 
     if usar_cardapio:
         if "bovina" in prot_utilizada:

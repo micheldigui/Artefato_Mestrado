@@ -53,6 +53,9 @@ try:
         DIAS_SEMANA_PT,
         obter_proximos_dias_uteis,
         CENARIOS_DICT,
+        CENARIO_COMPRAS,
+        NOME_COMPRAS,
+        NOME_PREPARO,
         MODELOS_RANKING,
         MARGENS_INFO,
         FERIADOS_FIXOS_BR,
@@ -88,6 +91,9 @@ except ImportError:
         DIAS_SEMANA_PT,
         obter_proximos_dias_uteis,
         CENARIOS_DICT,
+        CENARIO_COMPRAS,
+        NOME_COMPRAS,
+        NOME_PREPARO,
         MODELOS_RANKING,
         MARGENS_INFO,
         FERIADOS_FIXOS_BR,
@@ -2464,8 +2470,8 @@ elif pagina_ativa == "Simulador de Cenários":
             cenario_sel = st.selectbox(
                 "Cenário de Dados (Ablation Study):",
                 opcoes_cenarios,
-                index=opcoes_cenarios.index(CENARIO_PADRAO),
-                key="sim_cenario_select"
+                index=opcoes_cenarios.index(CENARIO_COMPRAS if obj_chave == "compras" else CENARIO_PADRAO),
+                key=f"sim_cenario_select_{obj_chave}"
             )
             st.caption(f"ℹ️ {CENARIOS_DICT[cenario_sel]['descricao']}")
             
@@ -2626,7 +2632,7 @@ elif pagina_ativa == "Simulador de Cenários":
                         nutri_custom_override = st.number_input("Novo Quantitativo:", min_value=50, max_value=300, value=int(round(nutri_existente)), step=1, key="sim_nutri_num_sub")
                 else:
                     st.warning("**Meta da Nutrição não cadastrada para esta data.**")
-                    st.caption("Informe o valor para compor o modelo híbrido. Sem ele, o resultado usa apenas o ExtraTrees.")
+                    st.caption(f"Informe o valor para compor o modelo híbrido. Sem ele, o resultado usa apenas o {NOME_PREPARO}.")
                     valor_nutri_sim = st.number_input("Quantitativo Institucional da Simulação (0 = não informado):", min_value=0, max_value=300, value=0, step=1, key="sim_nutri_num_empty")
                     nutri_custom_override = valor_nutri_sim if valor_nutri_sim > 0 else None
 
@@ -2760,9 +2766,9 @@ elif pagina_ativa == "Compras & Suprimentos":
             "Ajuda a equipe de suprimentos a dimensionar pedidos quinzenais de carnes congeladas, arroz, feijão e faturamento contratual."
         ),
         como_foi_feito_ciencia=(
-"**Modelo de Longo Prazo (ExtraTrees, Cenário 2: Consumo + Calendário + Cardápio):** "
+f"**Modelo de Longo Prazo ({NOME_COMPRAS}, escolhido em Fev-Ago/2026):** "
             "A 14 dias de distância, ainda não existe quantitativo institucional. "
-            "Por isso, as compras usam apenas o histórico recente, o calendário escolar e o cardápio já preparado."
+            "Por isso, as compras usam apenas informações disponíveis com essa antecedência."
         ),
         como_usar_passos=(
             "1. **Consulte a cada 15 dias** o volume quinzenal total estimado.\n"
@@ -2778,7 +2784,7 @@ elif pagina_ativa == "Compras & Suprimentos":
     )
     
     with st.expander("Ajuste Fino de Modelo e Margens para Suprimentos (Opcional)", expanded=False):
-        st.caption("Modelo das compras: ExtraTrees congelado em 31/08/2026, sem quantitativo institucional.")
+        st.caption(f"Modelo das compras: {NOME_COMPRAS} congelado em 31/08/2026, sem quantitativo institucional.")
         margem_sup = st.selectbox(
             "Margem Protetiva:",
             list(MARGENS_INFO.keys()),
@@ -3332,11 +3338,11 @@ elif pagina_ativa == "Guia Prático":
                 df_tab07 = pd.read_csv(caminho_tab07, sep=";")
                 df_enc = df_tab07[df_tab07["Recorte"].str.startswith("Dias de enchente")].set_index("Configuracao")
                 e_nutri = df_enc.loc["Nutricionista Institucional"]
-                e_ia = df_enc.loc["ExtraTrees Congelado em 31/08"]
+                e_ia = df_enc.loc["IA Congelada em 31/08"]
                 st.markdown(f"""
                 Nos 5 dias de alagamento, nenhum método antecipou o evento:
                 - **Nutricionista:** MAE de {str(e_nutri['MAE']).replace('.', ',')} refeições, com {int(e_nutri['Sobra_Total_ref'])} refeições de sobra.
-                - **ExtraTrees congelado em 31/08:** MAE de {str(e_ia['MAE']).replace('.', ',')} refeições, com {int(e_ia['Sobra_Total_ref'])} refeições de sobra.
+                - **{NOME_PREPARO} congelado em 31/08:** MAE de {str(e_ia['MAE']).replace('.', ',')} refeições, com {int(e_ia['Sobra_Total_ref'])} refeições de sobra.
                 - **Diferença:** {f"{e_nutri['MAE'] - e_ia['MAE']:.2f}".replace('.', ',')} refeições por dia, com previsões ainda muito acima do consumo real.
                 """)
         with col_en2:

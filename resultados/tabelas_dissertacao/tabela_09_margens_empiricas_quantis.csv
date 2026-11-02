@@ -1,7 +1,7 @@
 ﻿Politica;Quantil;Margem_ref;Cobertura_FevAgo_pct;Cobertura_SetOut_Todos_pct;Cobertura_SetOut_Sem_Evento_pct
-IA Pura (ExtraTrees);P75;22.0;77.2;84.8;82.1
-IA Pura (ExtraTrees);P85;35.0;87.8;93.9;92.9
-IA Pura (ExtraTrees);P90;42.0;90.2;93.9;92.9
-Modelo Híbrido 50/50;P75;13.0;76.4;75.8;71.4
+IA Pura;P75;24.0;74.8;72.7;67.9
+IA Pura;P85;34.0;86.2;84.8;82.1
+IA Pura;P90;42.0;90.2;87.9;85.7
+Modelo Híbrido 50/50;P75;14.0;74.8;75.8;71.4
 Modelo Híbrido 50/50;P85;21.0;86.2;84.8;82.1
-Modelo Híbrido 50/50;P90;27.0;90.2;87.9;85.7
+Modelo Híbrido 50/50;P90;25.0;90.2;87.9;85.7

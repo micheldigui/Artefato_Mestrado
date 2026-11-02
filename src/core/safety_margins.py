@@ -3,7 +3,7 @@
 Implementa a metodologia de apoio à decisão para a dissertação:
   1. Períodos de 2026:
      - Retrospectivo: Fevereiro a Agosto (walk-forward com retreino semanal).
-     - Prospectivo: Setembro e Outubro (ExtraTrees congelado em 31/08, sem retreino).
+     - Prospectivo: Setembro e Outubro (modelos escolhidos em Fev-Ago, congelados em 31/08, sem retreino).
   2. Recortes de avaliação: o resultado principal usa todos os dias com consumo; o recorte
      secundário retira apenas dias com evento registrado (status_consumo == "atipico"),
      registro que só existe depois do consumo e por isso é declarado como definido depois do fato.
@@ -21,6 +21,9 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 from .config import GOLD, SILVER, RESULTADOS, SEMENTE_ALEATORIA
+from .selecao import (
+    FIM_TREINO_CONGELADO, PESO_IA_HIBRIDO, carregar_selecao, combinar_hibrido, executar_selecao, nome_modelo, treinar_congelado
+)
 
 PASTA_TABELAS = RESULTADOS / "tabelas_dissertacao"
 PASTA_TABELAS.mkdir(parents=True, exist_ok=True)
@@ -32,13 +35,9 @@ ARQUIVO_CONGELADO = RESULTADOS / "modelos" / "predicoes_congelado_set_out.parque
 
 PRECO_POR_REFEICAO = 14.00
 
-# Modelo de referência declarado pelo autor como congelado em 31/08/2026.
-# Em Fev-Ago ele não é o melhor do Cenário 2 (Voting fica à frente), e não deve ser trocado depois de ver Set-Out.
-CENARIO_REFERENCIA = "Cenario_2_Com_Cardapio"
 CENARIO_CLIMA = "Cenario_3_Com_Clima"
-MODELO_REFERENCIA = "Ensemble_Bagging_ExtraTrees"
-FIM_TREINO_CONGELADO = "2026-09-01"
-PESO_IA_HIBRIDO = 0.50
+POLITICA_IA = "IA Pura"
+POLITICA_HIBRIDO = "Modelo Híbrido 50/50"
 
 QUANTIS_MARGEM = {"P75": 0.75, "P85": 0.85, "P90": 0.90}
 N_BOOTSTRAP = 10000
@@ -110,11 +109,6 @@ def calcular_metricas_completas(y_real: np.ndarray, y_pred: np.ndarray, preco: f
     }
 
 
-def combinar_hibrido(pred_ia: np.ndarray, pred_nutri: np.ndarray, peso_ia: float = PESO_IA_HIBRIDO) -> np.ndarray:
-    """Combina a previsão da IA e o plano da nutricionista, arredondando para refeição inteira."""
-    return np.floor(peso_ia * np.asarray(pred_ia, dtype=float) + (1.0 - peso_ia) * np.asarray(pred_nutri, dtype=float) + 0.5)
-
-
 def calcular_margens_por_quantil(y_real: np.ndarray, y_pred: np.ndarray) -> Dict[str, float]:
     """Deriva as margens como quantis empíricos da falta (consumo - previsão), arredondados para cima."""
     residuos = np.asarray(y_real, dtype=float) - np.asarray(y_pred, dtype=float)
@@ -180,8 +174,9 @@ def carregar_dados_consolidados() -> Tuple[pd.DataFrame, pd.DataFrame]:
 
 
 def selecionar_referencia(df: pd.DataFrame) -> pd.DataFrame:
-    """Filtra as previsões walk-forward do modelo de referência em T+1."""
-    filtro = (df["horizonte"] == "t1") & (df["cenario"] == CENARIO_REFERENCIA) & (df["algoritmo"] == MODELO_REFERENCIA)
+    """Filtra as previsões walk-forward do modelo escolhido para o preparo."""
+    ref = carregar_selecao()["t1"]
+    filtro = (df["horizonte"] == "t1") & (df["cenario"] == ref["cenario"]) & (df["algoritmo"] == ref["algoritmo"])
     return df[filtro].sort_values("data")
 
 
@@ -272,15 +267,15 @@ def processar_retrospectivo(df_completo: pd.DataFrame) -> Tuple[pd.DataFrame, pd
 
     # Margens empíricas calibradas somente em Fev-Ago
     margens = {
-        "IA Pura (ExtraTrees)": calcular_margens_por_quantil(y_real, pred_ia),
-        "Modelo Híbrido 50/50": calcular_margens_por_quantil(y_real, pred_hibrido_50)
+        POLITICA_IA: calcular_margens_por_quantil(y_real, pred_ia),
+        POLITICA_HIBRIDO: calcular_margens_por_quantil(y_real, pred_hibrido_50)
     }
 
     linhas_politicas = [{
         "Politica": "Nutricionista Institucional", "Quantil": "Sem margem", "Margem_ref": 0.0, "Margem": "+0 ref",
         **calcular_metricas_completas(y_real, pred_nutri)
     }]
-    for politica, pred in (("IA Pura (ExtraTrees)", pred_ia), ("Modelo Híbrido 50/50", pred_hibrido_50)):
+    for politica, pred in ((POLITICA_IA, pred_ia), (POLITICA_HIBRIDO, pred_hibrido_50)):
         niveis = [("Sem margem", 0.0)] + list(margens[politica].items())
         for quantil, margem in niveis:
             linhas_politicas.append({
@@ -303,23 +298,15 @@ def processar_retrospectivo(df_completo: pd.DataFrame) -> Tuple[pd.DataFrame, pd
 # 4. Análise Prospectiva: Setembro e Outubro de 2026
 # =====================================================================
 
-def prever_com_modelo_congelado(gold_t1: pd.DataFrame, colunas: List[str]) -> pd.DataFrame:
-    """Reconstrói o ExtraTrees com dados até 31/08/2026 e prevê todos os dias com consumo de Set-Out.
+def prever_com_modelo_congelado(gold: pd.DataFrame, colunas: List[str], algoritmo: str) -> pd.DataFrame:
+    """Congela o modelo escolhido com dados até 31/08/2026 e prevê todos os dias com consumo de Set-Out.
 
-    A especificação difere do ExtraTrees do torneio (max_features e início do treino em 2025).
     Os atributos da semana usam o consumo anterior a cada sexta, mas não há retreino depois de 31/08.
     """
-    from .models import LIMITES_ALVO, arredondar_refeicoes, criar_pipeline_arvore
-    from sklearn.ensemble import ExtraTreesRegressor
+    from .models import LIMITES_ALVO, arredondar_refeicoes
 
-    treino = gold_t1[
-        (gold_t1["data"] < FIM_TREINO_CONGELADO) & (gold_t1["ano"] >= 2025) &
-        gold_t1["usar_no_treino"] & gold_t1["consumo"].notna()
-    ]
-    modelo = criar_pipeline_arvore(ExtraTreesRegressor(n_estimators=80, min_samples_leaf=5, random_state=SEMENTE_ALEATORIA, n_jobs=1))
-    modelo.fit(treino[colunas], treino["alvo_relativo"].clip(*LIMITES_ALVO))
-
-    teste = gold_t1[(gold_t1["data"] >= FIM_TREINO_CONGELADO) & (gold_t1["data"] <= "2026-10-31") & gold_t1["consumo"].notna()].copy()
+    modelo = treinar_congelado(gold, algoritmo, colunas)
+    teste = gold[(gold["data"] >= FIM_TREINO_CONGELADO) & (gold["data"] <= "2026-10-31") & gold["consumo"].notna()].copy()
     relativa = np.clip(modelo.predict(teste[colunas]), *LIMITES_ALVO)
     teste["previsao_ia"] = arredondar_refeicoes(relativa * teste["nivel_base"].values)
     return teste
@@ -329,9 +316,9 @@ def linhas_por_metodo(sub: pd.DataFrame, margens: Dict[str, Dict[str, float]]) -
     """Lista os métodos avaliados no período prospectivo com o modelo congelado."""
     return [
         ("Nutricionista Institucional", sub["plano_nutricionista"].values),
-        ("ExtraTrees Congelado em 31/08", sub["previsao_ia"].values),
+        ("IA Congelada em 31/08", sub["previsao_ia"].values),
         ("Híbrido 50/50 Congelado", sub["previsao_hibrido"].values),
-        ("Híbrido Congelado + Margem P85", sub["previsao_hibrido"].values + margens["Modelo Híbrido 50/50"]["P85"])
+        ("Híbrido Congelado + Margem P85", sub["previsao_hibrido"].values + margens[POLITICA_HIBRIDO]["P85"])
     ]
 
 
@@ -341,20 +328,22 @@ def processar_prospectivo(df_completo: pd.DataFrame, margens: Dict[str, Dict[str
 
     df_prosp = df_completo[df_completo["periodo"] == "Prospectivo"].copy()
     gold_t1 = pd.read_parquet(GOLD / "gold_t1.parquet")
+    gold_t1["rel_plano_humano"] = (gold_t1["plano_nutricionista"].fillna(gold_t1["reserva_discente"]) / gold_t1["nivel_base"]).fillna(1.0)
     cenarios = definir_cenarios_features()
-    cols = [c for c in cenarios[CENARIO_REFERENCIA] if c in gold_t1.columns]
+    ref = carregar_selecao()["t1"]
+    cols = [c for c in cenarios[ref["cenario"]] if c in gold_t1.columns]
 
     silver = pd.read_parquet(SILVER / "silver_fato_diaria.parquet")
     datas_evento = set(silver.loc[silver["status_consumo"].eq("atipico"), "data"])
 
-    te = prever_com_modelo_congelado(gold_t1, cols)
+    te = prever_com_modelo_congelado(gold_t1, cols, ref["algoritmo"])
     te["previsao_hibrido"] = combinar_hibrido(te["previsao_ia"].values, te["plano_nutricionista"].values)
     te["evento_registrado"] = te["data"].isin(datas_evento)
     te["eh_crise_climatica"] = te["data"].dt.strftime("%Y-%m-%d").isin(DIAS_ENCHENTE_SETEMBRO)
 
     # Cenário 3: mesma especificação congelada, acrescida da previsão de clima arquivada
     cols_clima = [c for c in cenarios[CENARIO_CLIMA] if c in gold_t1.columns]
-    te["previsao_ia_com_clima"] = prever_com_modelo_congelado(gold_t1, cols_clima)["previsao_ia"].values
+    te["previsao_ia_com_clima"] = prever_com_modelo_congelado(gold_t1, cols_clima, ref["algoritmo"])["previsao_ia"].values
 
     colunas_salvas = [
         "data", "origem", "consumo", "plano_nutricionista", "previsao_ia", "previsao_hibrido", "previsao_ia_com_clima",
@@ -380,8 +369,8 @@ def processar_prospectivo(df_completo: pd.DataFrame, margens: Dict[str, Dict[str
                 **calcular_metricas_completas(sub["consumo"].values, pred)
             })
 
-    modelos_foco = [MODELO_REFERENCIA, "Ensemble_Voting_Heterogeneo", "Ridge", "Lasso", "Ensemble_Boosting_Gradient"]
-    wf_t1 = df_prosp[(df_prosp["horizonte"] == "t1") & (df_prosp["cenario"] == CENARIO_REFERENCIA)]
+    modelos_foco = list(dict.fromkeys([ref["algoritmo"], "Ensemble_Bagging_ExtraTrees", "Ensemble_Voting_Heterogeneo", "Lasso", "Ensemble_Boosting_Gradient"]))
+    wf_t1 = df_prosp[(df_prosp["horizonte"] == "t1") & (df_prosp["cenario"] == ref["cenario"])]
     for recorte, filtro in ((recortes[0][0], wf_t1["data"].notna()), (recortes[1][0], ~wf_t1["evento_registrado"])):
         for alg in modelos_foco:
             g = wf_t1[filtro & (wf_t1["algoritmo"] == alg)].sort_values("data")
@@ -392,7 +381,7 @@ def processar_prospectivo(df_completo: pd.DataFrame, margens: Dict[str, Dict[str
                 "Recorte": recorte,
                 **calcular_metricas_completas(g["consumo_real"].values, g["previsao"].values)
             })
-        g = wf_t1[filtro & (wf_t1["algoritmo"] == MODELO_REFERENCIA)].sort_values("data")
+        g = wf_t1[filtro & (wf_t1["algoritmo"] == ref["algoritmo"])].sort_values("data")
         linhas_prosp.append({
             "Configuracao": "Walk-forward: Híbrido 50/50",
             "Tipo": "Modelo com retreino semanal",
@@ -423,8 +412,8 @@ def processar_prospectivo(df_completo: pd.DataFrame, margens: Dict[str, Dict[str
     for recorte, sub in recortes:
         for metodo, pred in (
             ("Nutricionista Institucional", sub["plano_nutricionista"].values),
-            ("ExtraTrees Congelado - Cenário 2", sub["previsao_ia"].values),
-            ("ExtraTrees Congelado - Cenário 3", sub["previsao_ia_com_clima"].values)
+            ("IA Congelada - Cenário de referência", sub["previsao_ia"].values),
+            ("IA Congelada - Cenário 3", sub["previsao_ia_com_clima"].values)
         ):
             linhas_c3.append({"Recorte": recorte, "Metodo": metodo, **calcular_metricas_completas(sub["consumo"].values, pred)})
     df_cenario_3 = pd.DataFrame(linhas_c3)
@@ -437,7 +426,7 @@ def processar_prospectivo(df_completo: pd.DataFrame, margens: Dict[str, Dict[str
     sem_evento = te[~te["evento_registrado"]]
 
     linhas_margens = []
-    for politica, pred_r, col in (("IA Pura (ExtraTrees)", ia_retro, "previsao_ia"), ("Modelo Híbrido 50/50", hib_retro, "previsao_hibrido")):
+    for politica, pred_r, col in ((POLITICA_IA, ia_retro, "previsao_ia"), (POLITICA_HIBRIDO, hib_retro, "previsao_hibrido")):
         for quantil, margem in margens[politica].items():
             linhas_margens.append({
                 "Politica": politica,
@@ -460,22 +449,22 @@ def processar_prospectivo(df_completo: pd.DataFrame, margens: Dict[str, Dict[str
     ]
     linhas_boot = []
     for amostra, semanas, y, ia, nutri, hib in amostras:
-        for comparacao, a, b in (("ExtraTrees menos Nutricionista", nutri, ia), ("Híbrido menos Nutricionista", nutri, hib), ("Híbrido menos ExtraTrees", ia, hib)):
+        for comparacao, a, b in (("IA menos Nutricionista", nutri, ia), ("Híbrido menos Nutricionista", nutri, hib), ("Híbrido menos IA", ia, hib)):
             linhas_boot.append({"Amostra": amostra, "Comparacao": comparacao, **comparar_por_bootstrap_semanal(semanas, y, a, b)})
     df_bootstrap = pd.DataFrame(linhas_boot)
 
     # 6. Síntese Comparativa Retrospectivo vs. Prospectivo
     def linha_sintese(periodo: str, natureza: str, y: np.ndarray, nutri: np.ndarray, ia: np.ndarray, hib: np.ndarray) -> dict:
         m_nutri, m_ia, m_hib = (calcular_metricas_completas(y, p) for p in (nutri, ia, hib))
-        m_marg = calcular_metricas_completas(y, hib + margens["Modelo Híbrido 50/50"]["P85"])
+        m_marg = calcular_metricas_completas(y, hib + margens[POLITICA_HIBRIDO]["P85"])
         return {
             "Período": periodo,
             "Natureza": natureza,
             "N_Dias": len(y),
             "Nutricionista_MAE": m_nutri["MAE"],
             "Nutricionista_WAPE": f"{m_nutri['WAPE_pct']}%",
-            "IA_ExtraTrees_MAE": m_ia["MAE"],
-            "IA_ExtraTrees_WAPE": f"{m_ia['WAPE_pct']}%",
+            "IA_MAE": m_ia["MAE"],
+            "IA_WAPE": f"{m_ia['WAPE_pct']}%",
             "Hibrido_50_MAE": m_hib["MAE"],
             "Hibrido_50_WAPE": f"{m_hib['WAPE_pct']}%",
             "Margem_P85_Deficit_Dias": f"{m_marg['Taxa_Deficit_pct']}%",
@@ -649,13 +638,13 @@ def gerar_figuras_dissertacao(df_completo: pd.DataFrame) -> None:
     ax1.set_title(f"Nutricionista Institucional (MAE={np.mean(np.abs(y_nut - y_r)):.2f})")
     ax1.legend(frameon=True)
     
-    ax2.scatter(y_r, y_m, color="#1f77b4", alpha=0.6, label="IA (ExtraTrees)", edgecolors="none")
+    ax2.scatter(y_r, y_m, color="#1f77b4", alpha=0.6, label="IA", edgecolors="none")
     ax2.plot(lims, lims, "k--", alpha=0.6)
     ax2.set_xlim(lims)
     ax2.set_ylim(lims)
     ax2.set_xlabel("Consumo Real")
     ax2.set_ylabel("Predição Machine Learning")
-    ax2.set_title(f"IA Pura: ExtraTrees (MAE={np.mean(np.abs(y_m - y_r)):.2f})")
+    ax2.set_title(f"IA Pura (MAE={np.mean(np.abs(y_m - y_r)):.2f})")
     ax2.legend(frameon=True)
     
     plt.suptitle("Figura 20: Confronto de Dispersão: Estimativa Humana vs. Machine Learning (Fev-Ago/2026)", fontsize=12)
@@ -695,7 +684,7 @@ def gerar_figuras_dissertacao(df_completo: pd.DataFrame) -> None:
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 4.5))
     df_pol = pd.read_csv(PASTA_TABELAS / "tabela_05_politicas_margens_retrospectivo.csv", sep=";")
     
-    sub_ia = df_pol[df_pol["Politica"] == "IA Pura (ExtraTrees)"]
+    sub_ia = df_pol[df_pol["Politica"] == POLITICA_IA]
     sub_hib = df_pol[df_pol["Politica"] == "Modelo Híbrido 50/50"]
     
     ax1.plot(sub_ia["Margem_ref"], sub_ia["Taxa_Deficit_pct"], marker="o", color="#1f77b4", linewidth=2, label="IA Pura")
@@ -732,7 +721,7 @@ def gerar_figuras_dissertacao(df_completo: pd.DataFrame) -> None:
     
     ax1.plot(datas, y_real, "ko-", linewidth=2, markersize=5, label="Consumo Real")
     ax1.plot(datas, y_nutri, "r--", linewidth=1.8, label="Nutricionista Institucional")
-    ax1.plot(datas, y_ia, "b-.", linewidth=1.8, label="ExtraTrees Congelado")
+    ax1.plot(datas, y_ia, "b-.", linewidth=1.8, label="IA Congelada")
     ax1.plot(datas, y_hib, "g-", linewidth=2, label="Modelo Híbrido 50/50")
     
     # Destacar as datas de enchente extrema
@@ -791,7 +780,7 @@ def gerar_figuras_dissertacao(df_completo: pd.DataFrame) -> None:
     
     ax.plot(datas_out, y_real_out, "ko-", linewidth=2, markersize=5, label="Consumo Real")
     ax.plot(datas_out, y_nut_out, "r--", linewidth=1.8, label="Nutricionista Institucional")
-    ax.plot(datas_out, y_ia_out, "b-.", linewidth=1.8, label="ExtraTrees Congelado")
+    ax.plot(datas_out, y_ia_out, "b-.", linewidth=1.8, label="IA Congelada")
     ax.plot(datas_out, y_hib_out, "g-", linewidth=2, label="Modelo Híbrido 50/50")
     
     ax.set_ylabel("Refeições Servidas")
@@ -809,7 +798,7 @@ def gerar_figuras_dissertacao(df_completo: pd.DataFrame) -> None:
     
     ordem_desejada = [
         "Nutricionista Institucional",
-        "ExtraTrees Congelado em 31/08",
+        "IA Congelada em 31/08",
         "Híbrido 50/50 Congelado",
         "Híbrido Congelado + Margem P85"
     ]
@@ -818,7 +807,7 @@ def gerar_figuras_dissertacao(df_completo: pd.DataFrame) -> None:
     sub_p["ordem"] = sub_p["Configuracao"].map({nome: i for i, nome in enumerate(ordem_desejada)})
     sub_p = sub_p.sort_values("ordem").reset_index(drop=True)
     
-    labels_b = ["Nutricionista", "ExtraTrees Congelado", "Híbrido Congelado", "Híbrido + Margem P85"]
+    labels_b = ["Nutricionista", "IA Congelada", "Híbrido Congelado", "Híbrido + Margem P85"]
     x = np.arange(len(labels_b))
     width = 0.35
     
@@ -847,7 +836,7 @@ def gerar_figuras_dissertacao(df_completo: pd.DataFrame) -> None:
     fig, ax = plt.subplots(figsize=(9, 4.8))
     df_pol = pd.read_csv(PASTA_TABELAS / "tabela_05_politicas_margens_retrospectivo.csv", sep=";")
     
-    sub_ia = df_pol[df_pol["Politica"] == "IA Pura (ExtraTrees)"]
+    sub_ia = df_pol[df_pol["Politica"] == POLITICA_IA]
     sub_hib = df_pol[df_pol["Politica"] == "Modelo Híbrido 50/50"]
     nutri = df_pol[df_pol["Politica"] == "Nutricionista Institucional"].iloc[0]
     
@@ -890,11 +879,11 @@ def gerar_figuras_dissertacao(df_completo: pd.DataFrame) -> None:
     w = 0.25
 
     nutri_vals = df_sint["Nutricionista_MAE"].values
-    ia_vals = df_sint["IA_ExtraTrees_MAE"].values
+    ia_vals = df_sint["IA_MAE"].values
     hib_vals = df_sint["Hibrido_50_MAE"].values
     
     r1 = ax.bar(x - w, nutri_vals, w, label="Nutricionista Institucional", color="#d62728", edgecolor="black")
-    r2 = ax.bar(x, ia_vals, w, label="ExtraTrees (Modelo de Referência)", color="#1f77b4", edgecolor="black")
+    r2 = ax.bar(x, ia_vals, w, label="IA (Modelo de Referência)", color="#1f77b4", edgecolor="black")
     r3 = ax.bar(x + w, hib_vals, w, label="Modelo Híbrido 50/50", color="#2ca02c", edgecolor="black")
     
     for r in list(r1) + list(r2) + list(r3):
@@ -926,6 +915,8 @@ def executar_pipeline_completo():
     
     df_completo, silver = carregar_dados_consolidados()
     
+    _, registro = executar_selecao()
+    print(f"\n0. Modelos escolhidos em Fev-Ago: {registro['vencedores']}")
     print("\n1. Processando Período Retrospectivo (Fevereiro a Agosto de 2026)...")
     m_retro, c_t1, t2_retro, pol_retro, margens = processar_retrospectivo(df_completo)
     print(f"   -> {len(m_retro)} configurações avaliadas.")

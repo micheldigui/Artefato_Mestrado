@@ -1,0 +1,27 @@
+{
+  "regra": "Menor MAE em Fev-Ago/2026 por horizonte, com RMSE como desempate",
+  "periodo": [
+    "2026-02-01",
+    "2026-08-31"
+  ],
+  "fim_do_treino_congelado": "2026-08-31",
+  "reprocessado_em": "2026-11-02",
+  "vencedores": {
+    "t1": {
+      "algoritmo": "Ridge",
+      "cenario": "Cenario_2_Com_Cardapio",
+      "tipo": "hibrido",
+      "MAE": 22.08,
+      "RMSE": 33.39,
+      "n_dias": 123
+    },
+    "t2": {
+      "algoritmo": "Ensemble_Bagging_ExtraTrees",
+      "cenario": "Cenario_1_Base_Cardapio",
+      "tipo": "isolado",
+      "MAE": 27.93,
+      "RMSE": 42.28,
+      "n_dias": 123
+    }
+  }
+}

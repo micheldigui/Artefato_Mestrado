@@ -20,7 +20,7 @@ nb = {
                 '2. **Eficiência e Zelo com o Erário Público:** Cada refeição produzida a mais e não consumida torna-se desperdício biológico e prejuízo financeiro (R$ 14,00 por refeição).\n',
                 '\n',
                 'Este notebook avalia o período seguinte ao usado para treinar e calibrar o modelo:\n',
-                                '* **Período Prospectivo (Setembro e Outubro de 2026 - $N=33$ dias):** Modelo ExtraTrees congelado em 31/08/2026, sem retreino, com métricas reprocessadas em 01/11/2026. O modelo é reconstruído com dados até 31/08, e sua especificação difere do ExtraTrees do torneio (`max_features` e início do treino em 2025).\n',
+                                '* **Período Prospectivo (Setembro e Outubro de 2026 - $N=33$ dias):** Modelos escolhidos em Fev-Ago e congelados em 31/08/2026, sem retreino, com métricas reprocessadas em 01/11/2026. O modelo é reconstruído com dados até 31/08, e sua especificação difere do ExtraTrees do torneio (`max_features` e início do treino em 2025).\n',
                 '\n',
                 '### Como os dias atípicos são tratados\n',
                 'O registro de dia atípico só existe depois do consumo. Por isso, ele tem três usos distintos:\n',

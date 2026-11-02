@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -8,11 +9,14 @@ from src.app.modelos import preparar_fato
 from src.app.storage import carregar_fato_diaria_completa
 from src.core.config import RESULTADOS
 from src.core.gold_features import construir_emissao
+from src.core.models import definir_cenarios_features
+from src.core.selecao import carregar_selecao, treinar_congelado
 
 
 def previsao_do_torneio(data):
     preds = pd.read_parquet(RESULTADOS / "modelos" / "predicoes_detalhadas_torneio.parquet")
-    filtro = (preds["horizonte"] == "t1") & (preds["cenario"] == "Cenario_2_Com_Cardapio") & (preds["algoritmo"] == "Ensemble_Bagging_ExtraTrees")
+    ref = carregar_selecao()["t1"]
+    filtro = (preds["horizonte"] == "t1") & (preds["cenario"] == ref["cenario"]) & (preds["algoritmo"] == ref["algoritmo"])
     return float(preds[filtro & (preds["data"] == data)]["previsao"].iloc[0])
 
 
@@ -33,6 +37,16 @@ def test_simulador_nunca_usa_clima_observado():
     sim = p.simular_previsao_data("2026-09-10", cenario_escolhido="Cenário 3 = Cenário 2 + Clima")
     assert sim["fonte_clima"] == "Previsão Arquivada na Emissão"
     assert sim["chuva_utilizada"] == pytest.approx(19.6, abs=0.1)
+
+
+def test_compras_usam_o_modelo_congelado_escolhido():
+    ref = carregar_selecao()["t2"]
+    gold = p.carregar_gold("t2")
+    colunas = [c for c in definir_cenarios_features()[ref["cenario"]] if c in gold.columns]
+    linha = gold[gold["data"] == "2026-09-15"]
+    relativa = np.clip(treinar_congelado(gold, ref["algoritmo"], colunas).predict(linha[colunas]), 0.2, 2.5)
+    sim = p.simular_previsao_data("2026-09-15", objetivo="compras", cenario_escolhido=p.CENARIO_COMPRAS, modelo_escolhido=p.MODELO_IA)
+    assert sim["pred_ia"] == float(np.floor(relativa[0] * linha["nivel_base"].iloc[0] + 0.5))
 
 
 def test_t2_nao_usa_quantitativo_nem_com_hibrido():
