@@ -1,5 +1,5 @@
 {
-  "auditoria_realizada_em": "01/11/2026 13:20:04",
+  "auditoria_realizada_em": "01/11/2026 23:27:16",
   "testes": [
     {
       "teste": "Estrutura Operacional e Restrições de Horizonte",
@@ -14,18 +14,18 @@
       "detalhe": "Sem valores infinitos, níveis basais positivos e sem colunas nulas/constantes."
     },
     {
-      "teste": "Teste Unitário de Não-Vazamento Temporal (Zero Data Leakage)",
+      "teste": "Teste de Não-Vazamento Temporal dos Atributos da Gold",
       "sucesso": true,
       "erros": [],
       "origens_auditadas": 5,
       "detalhes": [
-        "Sexta 31/03/2023: 623 consumos futuros embaralhados -> Predição 100% Invariante.",
-        "Sexta 16/02/2024: 477 consumos futuros embaralhados -> Predição 100% Invariante.",
-        "Sexta 14/02/2025: 329 consumos futuros embaralhados -> Predição 100% Invariante.",
-        "Sexta 14/11/2025: 174 consumos futuros embaralhados -> Predição 100% Invariante.",
-        "Sexta 23/10/2026: 6 consumos futuros embaralhados -> Predição 100% Invariante."
+        "Sexta 31/03/2023: 623 consumos futuros corrompidos -> preditores idênticos.",
+        "Sexta 16/02/2024: 477 consumos futuros corrompidos -> preditores idênticos.",
+        "Sexta 14/02/2025: 329 consumos futuros corrompidos -> preditores idênticos.",
+        "Sexta 14/11/2025: 174 consumos futuros corrompidos -> preditores idênticos.",
+        "Sexta 23/10/2026: 6 consumos futuros corrompidos -> preditores idênticos."
       ],
-      "conclusao": "PROVADO: Os modelos não enxergam nenhuma informação futura posterior à sexta de corte."
+      "conclusao": "Atributos da Gold invariantes nas emissões testadas. Não avalia a seleção dos dias de teste."
     }
   ],
   "todos_passaram": true

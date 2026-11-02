@@ -31,11 +31,11 @@ O artefato implementa uma abordagem em camadas de informação, permitindo opera
 
 | Termo Operacional | Definição no Contexto da Pesquisa | Termo Matemático / Técnico |
 | :--- | :--- | :--- |
-| **Consumo Real (Refeições Servidas)** | Total efetivo de refeições distribuídas na catraca do refeitório. | Alvo de regressão ($y$) |
+| **Consumo Real (Refeições Servidas)** | Total efetivo de refeições distribuídas no refeitório. | Alvo de regressão ($y$) |
 | **Consumo de Referência (Nível Basal)** | Demanda estimada antes da data usando a mediana móvel de dias normais e o mesmo dia da semana recente. | Nível basal / Baseline ($\bar{y}_{base}$) |
 | **Consumo Relativo à Referência** | Variação percentual em relação ao nível basal. Permite ao modelo aprender padrões invariantes a oscilações no número de matrículas. | Razão normalizada ($y / \bar{y}_{base}$) |
 | **Modelo Híbrido Adaptativo** | Combinação ponderada entre o algoritmo de aprendizado de máquina e a estimativa empírica da nutricionista, explorando o melhor de ambos. | Ensemble ponderado ($w_1 \cdot \hat{y}_{ML} + w_2 \cdot \hat{y}_{nutri}$) |
-| **Margem de Proteção Alimentar (Conformal)** | Acréscimo estatisticamente calibrado (+12 a +18 refeições) para mitigar o risco social de falta de comida para os estudantes vulneráveis. | Margem residual empírica ($q_{1-\alpha}$) |
+| **Margem de Proteção Alimentar** | Acréscimo calculado a partir da falta observada em Fev-Ago para mitigar o risco de falta de comida. Na política P85, são +21 refeições no Modelo Híbrido e +35 no ExtraTrees. | Quantil empírico da falta ($q_{0,85}$ de consumo - previsão) |
 | **Bloco Contínuo de Aulas** | Período ininterrupto de aulas entre recessos, férias ou greves. Crucial para capturar quedas de frequência de fim de semestre. | Regime letivo / Bloco acadêmico |
 
 ---

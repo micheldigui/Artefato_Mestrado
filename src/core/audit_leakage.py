@@ -1,4 +1,8 @@
-"""Módulo de Auditoria Automatizada e Teste Unitário Anti-Vazamento Temporal (Zero Data Leakage)."""
+"""Módulo de Auditoria da Camada Gold: confere se os atributos respeitam a sexta de corte.
+
+Cobre atributos derivados de consumo, rótulos e clima observado. A avaliação dos modelos é
+auditada em test_zero_leakage_models.py.
+"""
 from pathlib import Path
 import json
 import numpy as np
@@ -7,6 +11,7 @@ import pandas as pd
 from .config import GOLD, RESULTADOS, SEMENTE_ALEATORIA, SILVER
 from .gold_features import construir_gold
 
+# Colunas que dependem do resultado do dia-alvo por construção: não são preditores e não podem selecionar teste.
 COLUNAS_RESULTADO_E_ROTULO = {
     "consumo",
     "alvo_relativo",
@@ -92,7 +97,7 @@ def testar_qualidade_dados(t1: pd.DataFrame, t2: pd.DataFrame) -> dict:
 
 
 def testar_vazamento_temporal_adversarial(fato: pd.DataFrame, t1: pd.DataFrame, t2: pd.DataFrame, origens_teste: list) -> dict:
-    """Teste de não-vazamento adversarial: embaralha o futuro e valida se nenhum preditor passado muda."""
+    """Corrompe consumo, registros e clima observado do futuro e valida se os preditores da emissão mudam."""
     gerador = np.random.default_rng(SEMENTE_ALEATORIA)
     colunas_preditoras = lambda df: [c for c in df.columns if c not in COLUNAS_RESULTADO_E_ROTULO]
     
@@ -103,18 +108,21 @@ def testar_vazamento_temporal_adversarial(fato: pd.DataFrame, t1: pd.DataFrame, 
         data_origem = pd.to_datetime(origem)
         fato_embaralhado = fato.copy()
         
-        # Seleciona todo o consumo futuro (da sexta em diante) e substitui por ruído aleatório
+        # Seleciona tudo o que vem da sexta em diante e substitui por ruído aleatório
         eh_futuro = fato_embaralhado["data"] >= data_origem
         tem_consumo_futuro = eh_futuro & fato_embaralhado["consumo"].notna()
         n_alterados = tem_consumo_futuro.sum()
         
         if n_alterados > 0:
             fato_embaralhado.loc[tem_consumo_futuro, "consumo"] = gerador.integers(1, 500, n_alterados).astype(float)
+            fato_embaralhado.loc[tem_consumo_futuro, "status_consumo"] = "atipico"
+            fato_embaralhado.loc[eh_futuro, "chuva_mm"] = gerador.uniform(0, 100, eh_futuro.sum())
             
         # Reconstrói a Camada Gold com o futuro contaminado por ruído
         gold_recalculado = construir_gold(fato_embaralhado)
         
         # Valida se os preditores calculados para essa sexta-feira permaneceram idênticos
+        erros_antes = len(erros)
         for nome_horiz, df_original in (("t1", t1), ("t2", t2)):
             original_origem = df_original[df_original["origem"] == data_origem].reset_index(drop=True)
             recalculado_origem = gold_recalculado[nome_horiz][gold_recalculado[nome_horiz]["origem"] == data_origem].reset_index(drop=True)
@@ -134,21 +142,22 @@ def testar_vazamento_temporal_adversarial(fato: pd.DataFrame, t1: pd.DataFrame, 
             except AssertionError as exc:
                 erros.append(f"Vazamento detectado em {nome_horiz} na data {origem}: {str(exc)[:200]}")
                 
-        detalhes_origens.append(f"Sexta {data_origem.strftime('%d/%m/%Y')}: {n_alterados} consumos futuros embaralhados -> Predição 100% Invariante.")
+        situacao = "preditores idênticos" if len(erros) == erros_antes else "preditores alterados"
+        detalhes_origens.append(f"Sexta {data_origem.strftime('%d/%m/%Y')}: {n_alterados} consumos futuros corrompidos -> {situacao}.")
         
     sucesso = len(erros) == 0
     return {
-        "teste": "Teste Unitário de Não-Vazamento Temporal (Zero Data Leakage)",
+        "teste": "Teste de Não-Vazamento Temporal dos Atributos da Gold",
         "sucesso": sucesso,
         "erros": erros,
         "origens_auditadas": len(origens_teste),
         "detalhes": detalhes_origens,
-        "conclusao": "PROVADO: Os modelos não enxergam nenhuma informação futura posterior à sexta de corte." if sucesso else "FALHA DE ISOLAMENTO TEMPORAL"
+        "conclusao": "Atributos da Gold invariantes nas emissões testadas. Não avalia a seleção dos dias de teste." if sucesso else "FALHA DE ISOLAMENTO TEMPORAL"
     }
 
 
 def executar_auditoria_completa() -> dict:
-    """Executa a bateria de auditoria de dados e vazamento e grava o relatório."""
+    """Executa a bateria de auditoria da camada Gold e grava o relatório."""
     pasta_auditoria = RESULTADOS / "auditoria"
     pasta_auditoria.mkdir(parents=True, exist_ok=True)
     
@@ -180,7 +189,7 @@ def executar_auditoria_completa() -> dict:
 
 if __name__ == "__main__":
     rel = executar_auditoria_completa()
-    print("=== Relatório de Auditoria de Não-Vazamento ===")
+    print("=== Relatório de Auditoria da Camada Gold ===")
     for teste in rel["testes"]:
         status = "APROVADO [OK]" if teste["sucesso"] else "REPROVADO [FALHA]"
         print(f"\n{status} - {teste['teste']}")

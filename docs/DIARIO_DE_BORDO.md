@@ -176,4 +176,52 @@
 * **Decisões Técnicas Registradas:**
   * O artefato está plenamente operacional, auditado, reprodutível e pronto tanto para uso em campo quanto para defesa na banca examinadora.
 
+---
 
+### [Entrada #007] – 01/11/2026: Correção da Avaliação, Modelo Congelado e Auditoria Reescrita
+* **Contexto e Motivação:**
+  * Revisão independente confirmou que os atributos e o treino respeitam a sexta de corte, mas encontrou problemas na medição do erro: o filtro `usar_no_treino` retirava dias do teste usando o consumo do próprio dia, valores do período Fev-Ago vinham do torneio de Fev a Out, previsões e margens estavam digitadas no código, e os testes de auditoria não conseguiam reprovar.
+* **Premissas Declaradas pelo Autor:**
+  * Fev-Ago/2026 é retrospectivo. Set-Out/2026 é prospectivo, com **ExtraTrees** congelado em 31/08/2026.
+  * A emissão ocorre na sexta à tarde. Cardápio, calendário e previsão de clima estão disponíveis nos dois horizontes, e o quantitativo institucional existe apenas no $T+1$: reservas discentes até 2025 e estimativa da nutricionista em 2026, ambas fechadas até a sexta à tarde.
+  * O registro de dia atípico é feito depois do consumo e serve para que o dia não contamine as previsões seguintes.
+* **Ações Executadas:**
+  1. **Avaliação:** `usar_no_treino` permanece no treino e saiu do teste. O resultado principal usa todos os dias (123 em Fev-Ago e 33 em Set-Out), e o recorte sem evento registrado aparece ao lado (28 dias em Set-Out).
+  2. **Período Prospectivo:** o modelo congelado passou a ser o resultado principal, e o walk-forward virou análise de sensibilidade. Registro de reprocessamento: as métricas foram geradas em 01/11/2026; o modelo é reconstruído com dados até 31/08, e sua especificação difere do ExtraTrees do torneio.
+  3. **Valores Digitados:** tabelas, títulos e figuras agora são calculados a partir das previsões. A afirmação de 30,56 refeições foi substituída por 14,60.
+  4. **Margens:** o P85 fixo de +12 foi substituído por quantis empíricos de Fev-Ago (P85 do híbrido: +21 refeições), aplicados sem recalibrar em Set-Out. O termo "conformal" foi retirado.
+  5. **Comparação Estatística:** nova tabela com bootstrap pareado por semana, 10.000 reamostragens.
+  6. **Cenário 3:** nova tabela com o modelo congelado nos 33 dias e nos dias de enchente.
+  7. **Auditoria:** testes reescritos sobre a avaliação real, com vazamentos injetados para provar que reprovam.
+* **Decisões Técnicas Registradas:**
+  * *Decisão:* Não mudar o corte para `data <= origem`. O teste de sensibilidade não mostrou ganho claro.
+  * *Decisão:* Não alterar a proteção dos lags nesta versão. Retirar também o dia 11/09/2026, registrado como atípico mas acima do limiar de 60%, muda atributos de 21 linhas de Set-Out e fica como proposta para uma nova versão.
+  * *Decisão:* Não trocar o ExtraTrees por modelos com resultado melhor em Set-Out, para não escolher depois de ver o período prospectivo.
+* **Pendências:**
+
+---
+
+### [Entrada #008] – 02/11/2026: Unificação do Aplicativo aos Modelos Auditados
+* **Contexto e Motivação:**
+  * O aplicativo treinava modelos próprios em uma base antiga, com clima observado, e exibia métricas fixas. O simulador usava modelos treinados até 31/08 mesmo para datas anteriores.
+  * Testes isolados com 80 configurações de atributos não justificaram mudança: a configuração escolhida em Fev-Ago não se sustentou em Set-Out, e retirar o clima ou ajustar a escala do quantitativo não trouxe ganho. A escolha foi gravada antes de calcular Set-Out.
+* **Ações Executadas:**
+  1. **Modelos Servidos:** Preparo ($T+1$): Híbrido 50/50 com ExtraTrees Cenário 2. Compras ($T+2$): ExtraTrees Cenário 2, sem quantitativo. Ambos congelados em 31/08/2026.
+  2. **Atributos Operacionais:** O app calcula a emissão com as mesmas funções da camada Gold. Dias com registro de atípico ficam fora do histórico das próximas previsões.
+  3. **Simulador:** Corta os dados na sexta da emissão. Datas até 31/08/2026 usam walk-forward e as demais usam o modelo congelado. O clima é sempre o previsto.
+  4. **Quantitativo:** Removidos o uso no $T+2$ e o valor fixo de 182,7. Sem quantitativo, o resultado usa apenas o ExtraTrees.
+  5. **Margens e Textos:** Margens lidas das tabelas calculadas, e textos antigos substituídos por valores calculados.
+  6. **Senhas:** Retiradas do código. A edição exige `st.secrets`.
+* **Limitação Registrada:**
+  * Nos Cenários 3 e 4 de datas futuras, o app recebe só a chuva e a temperatura diárias. Chuva da manhã e acumulado de 3 dias são imputados.
+  * A base `gold_dataset_ml_limpo` deixou de ser usada pelo código.
+
+---
+
+### [Entrada #009] – 02/11/2026: Fechamento dos Notebooks e das Figuras dos Métodos Humanos
+* **Ações Executadas:**
+  1. **Figuras 01 e 02:** passaram a medir o erro dos métodos humanos em todos os dias com consumo (442 dias em 2023-2025 e 156 em 2026). Os valores substituem os da Entrada #003: nutricionista com $r=0.619$, MAE 29,0 e WAPE 17,1%; reservas com $r=0.575$, MAE 27,2 e WAPE 20,2%.
+  2. **Notebooks:** o 04 reúne a avaliação retrospectiva de Fev-Ago, com torneio, híbrido e margens. O 05 reúne a avaliação prospectiva de Set-Out. Treino e teste seguem no mesmo fluxo, com a regra de treino inalterada.
+  3. **Saídas:** os cinco notebooks passaram a ser salvos com as tabelas e figuras.
+* **Decisões Técnicas Registradas:**
+  * *Decisão:* As Figuras 03 a 12 continuam descrevendo dias regulares, o que está declarado no notebook 03.

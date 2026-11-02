@@ -1,31 +1,45 @@
 {
-  "data_auditoria": "01/11/2026 23:32:42",
-  "status_geral": "APROVADO - ZERO DATA LEAKAGE",
+  "data_auditoria": "02/11/2026 00:40:10",
+  "status_geral": "APROVADO NOS TESTES EXECUTADOS",
+  "alcance": "Cobre consumo, rótulos e oráculos na avaliação da pesquisa. Não cobre o aplicativo.",
   "testes": [
     {
       "teste": "1. Isolamento de Variáveis Alvo e Restrições de Horizonte",
       "sucesso": true,
       "erros": [],
-      "detalhe": "Nenhum alvo ou oráculo ex-post presente nas matrizes X. T2 estritamente autônomo."
+      "detalhe": "Nenhum alvo, oráculo ou coluna de controle nas matrizes X. T2 sem quantitativo institucional."
     },
     {
-      "teste": "2. Fronteira Temporal Estrita em 100% das Semanas (max(treino) < origem)",
+      "teste": "2. Fronteira Temporal nas Chamadas Reais de Treino (max(treino) < origem)",
       "sucesso": true,
-      "semanas_auditadas": 320,
+      "semanas_auditadas": 72,
+      "emissoes_sem_dias_avaliaveis": [
+        "t1 2026-10-30",
+        "t2 2026-10-23",
+        "t2 2026-10-30"
+      ],
       "erros": [],
-      "detalhe": "Todas as 320 semanas auditadas respeitaram estritamente max(treino) < corte."
+      "detalhe": "72 emissões com fit registrado; 3 sem dias avaliáveis: ['t1 2026-10-30', 't2 2026-10-23', 't2 2026-10-30']."
     },
     {
-      "teste": "3. Invariância Adversarial dos Modelos com Futuro Embaralhado",
+      "teste": "3. Seleção do Teste sem Colunas Derivadas do Resultado",
+      "sucesso": true,
+      "dias_avaliados": 156,
+      "erros": [],
+      "detalhe": "156 de 156 dias com consumo foram avaliados."
+    },
+    {
+      "teste": "4. Invariância Adversarial com Consumo, Alvo e Rótulos Futuros Corrompidos",
       "sucesso": true,
       "erros": [],
       "detalhes": [
-        "Emissão 08/03/2024: Futuro corrompido em 451 dias -> Predições dos modelos IDÊNTICAS (diff = 0.000000).",
-        "Emissão 13/09/2024: Futuro corrompido em 388 dias -> Predições dos modelos IDÊNTICAS (diff = 0.000000).",
-        "Emissão 09/05/2025: Futuro corrompido em 276 dias -> Predições dos modelos IDÊNTICAS (diff = 0.000000).",
-        "Emissão 06/03/2026: Futuro corrompido em 138 dias -> Predições dos modelos IDÊNTICAS (diff = 0.000000)."
+        "Emissão 08/03/2024: maior diferença entre previsões = 0.000000 refeições.",
+        "Emissão 13/09/2024: maior diferença entre previsões = 0.000000 refeições.",
+        "Emissão 09/05/2025: maior diferença entre previsões = 0.000000 refeições.",
+        "Emissão 06/03/2026: maior diferença entre previsões = 0.000000 refeições.",
+        "Emissão 04/09/2026: maior diferença entre previsões = 0.000000 refeições."
       ],
-      "conclusao": "PROVADO: Os algoritmos de Machine Learning são 100% cegos para qualquer dado futuro."
+      "conclusao": "5 emissões testadas em 3 modelos."
     }
   ]
 }

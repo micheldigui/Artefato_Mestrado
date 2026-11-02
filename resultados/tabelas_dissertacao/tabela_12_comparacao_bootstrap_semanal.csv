@@ -1,0 +1,10 @@
+﻿Amostra;Comparacao;Diferenca_MAE;IC95_Inferior;IC95_Superior;Semanas;Conclusao
+Fev-Ago walk-forward (todos os dias);ExtraTrees menos Nutricionista;1.58;-4.99;7.86;29;Sem diferença estatisticamente clara
+Fev-Ago walk-forward (todos os dias);Híbrido menos Nutricionista;-2.43;-5.6;0.57;29;Sem diferença estatisticamente clara
+Fev-Ago walk-forward (todos os dias);Híbrido menos ExtraTrees;-4.01;-7.82;-0.2;29;Diferença estatisticamente clara
+Todos os dias (N=33) - congelado;ExtraTrees menos Nutricionista;-5.48;-12.17;-0.17;8;Diferença estatisticamente clara
+Todos os dias (N=33) - congelado;Híbrido menos Nutricionista;-5.12;-7.92;-2.23;8;Diferença estatisticamente clara
+Todos os dias (N=33) - congelado;Híbrido menos ExtraTrees;0.36;-3.53;4.79;8;Sem diferença estatisticamente clara
+Sem evento registrado (N=28) - congelado;ExtraTrees menos Nutricionista;-3.86;-11.9;2.62;7;Sem diferença estatisticamente clara
+Sem evento registrado (N=28) - congelado;Híbrido menos Nutricionista;-4.79;-8.23;-1.08;7;Diferença estatisticamente clara
+Sem evento registrado (N=28) - congelado;Híbrido menos ExtraTrees;-0.93;-5.21;4.69;7;Sem diferença estatisticamente clara

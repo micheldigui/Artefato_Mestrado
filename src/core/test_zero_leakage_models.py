@@ -1,180 +1,230 @@
-"""Bateria de Testes Adversariais de Não-Vazamento Temporal nos Modelos Preditivos (Zero Data Leakage).
+"""Bateria de Testes Adversariais de Não-Vazamento Temporal nos Modelos Preditivos.
 
-Testa rigorosamente 4 dimensões de integridade:
-  1. Isolamento de Variáveis (Target Leakage): Garante que rótulos (consumo, alvo_relativo)
-     e oráculos ex-post nunca estejam presentes na matriz de preditores X.
-  2. Fronteira Temporal Estrita (Cutoff Boundary): Valida em todas as semanas-teste
-     que a data máxima do subconjunto de treinamento é estritamente anterior à sexta de emissão (max(data_treino) < origem).
-  3. Proibição Estrutural em T+2 (Compras Quinzenais): Confirma que o horizonte T+2
-     é 100% autônomo, sem nenhuma coluna ou resquício de planejamento humano (nutricionista ou alunos).
-  4. Teste de Invariância Adversarial (Futuro Embaralhado): Corrompe propositalmente
-     todo o consumo futuro com números aleatórios gerados por ruído branco. Treina os modelos
-     no dataset real vs. contaminado e valida se a predição passada permanece 100% idêntica.
+Exercita a função real de avaliação (avaliar_um_algoritmo) em 4 dimensões:
+  1. Isolamento de Variáveis: alvos, oráculos e colunas de controle derivadas do resultado
+     não podem estar na matriz de preditores X; T+2 não pode ter quantitativo institucional.
+  2. Fronteira Temporal: registra cada chamada real de fit e confirma max(data_treino) < origem.
+  3. Seleção do Teste: todo dia de 2026 com consumo precisa ser avaliado. Nenhuma coluna
+     derivada do resultado pode retirar dias do teste.
+  4. Invariância Adversarial: corrompe consumo, alvo e rótulos a partir da sexta de corte
+     e mede a diferença real entre as previsões.
+
+Alcance: os testes cobrem consumo, rótulos e oráculos. Não comprovam o horário em que reservas,
+plano da nutricionista ou cardápio foram registrados, que dependem da declaração do autor.
 """
 from pathlib import Path
 import json
 import numpy as np
 import pandas as pd
-from typing import Dict, List
+from typing import Callable, Dict, List, Optional
 
 from .config import GOLD, RESULTADOS, SEMENTE_ALEATORIA
 from .models import (
+    avaliar_um_algoritmo,
     obter_catalogo_modelos,
-    definir_cenarios_features,
-    LIMITES_ALVO,
-    arredondar_refeicoes
+    definir_cenarios_features
 )
 
 PASTA_AUDITORIA = RESULTADOS / "auditoria"
 PASTA_AUDITORIA.mkdir(parents=True, exist_ok=True)
 
+CENARIO_AUDITADO = "Cenario_2_Com_Cardapio"
+COLUNAS_PROIBIDAS = {
+    "consumo", "alvo_relativo", "tratamento", "usar_no_treino", "tipo_sugerido",
+    "oraculo_chuva_mm", "oraculo_chuva_horas", "oraculo_temp_max", "oraculo_vento_max"
+}
+MODELOS_INVARIANCIA = ["Ridge", "Ensemble_Bagging_ExtraTrees", "Ensemble_Boosting_Gradient"]
+ORIGENS_AMOSTRA = ["2024-03-08", "2024-09-13", "2025-05-09", "2026-03-06", "2026-09-04"]
+
+
+class ModeloEspiao:
+    """Registra as linhas recebidas no fit e no predict da avaliação real."""
+    def __init__(self, registros: list):
+        self.registros = registros
+
+    def fit(self, X: pd.DataFrame, y: pd.Series):
+        self.registros.append({"treino": X.index.tolist(), "alvo": []})
+        return self
+
+    def predict(self, X: pd.DataFrame) -> np.ndarray:
+        self.registros[-1]["alvo"] = X.index.tolist()
+        return np.ones(len(X))
+
+
+def registrar_chamadas(gold: pd.DataFrame, horizonte: str, colunas: List[str], origens: list, avaliador: Callable) -> list:
+    """Executa o avaliador com o modelo espião e devolve as linhas de cada emissão."""
+    registros = []
+    info = {"construtor": lambda: ModeloEspiao(registros), "familia": "Auditoria", "tipo_ensemble": "Auditoria"}
+    avaliador("Espiao", info, horizonte, "Auditoria", colunas, gold, origens)
+    return registros
+
+
+def origens_de_2026(gold: pd.DataFrame) -> list:
+    return sorted(gold.loc[gold["ano"] == 2026, "origem"].unique())
+
 
 def testar_isolamento_variaveis_alvo(cenarios: Dict[str, List[str]], gold_t1: pd.DataFrame, gold_t2: pd.DataFrame) -> dict:
-    """Verifica se alvos e variáveis ex-post não constam nos conjuntos de features preditoras."""
-    proibidas = {
-        "consumo", "alvo_relativo",
-        "oraculo_chuva_mm", "oraculo_chuva_horas", "oraculo_temp_max", "oraculo_vento_max"
-    }
-    
+    """Verifica se alvos, oráculos e colunas de controle não constam nas matrizes de preditores."""
     erros = []
     for nome_cenario, cols in cenarios.items():
-        vazamentos = set(cols).intersection(proibidas)
+        vazamentos = set(cols).intersection(COLUNAS_PROIBIDAS)
         if vazamentos:
-            erros.append(f"{nome_cenario} contém colunas proibidas: {vazamentos}")
-            
-    # Garantir que em T+2 não há plano da nutricionista
+            erros.append(f"{nome_cenario} contém colunas proibidas: {sorted(vazamentos)}")
+
+    # Garantir que em T+2 não há quantitativo institucional
     cols_t2 = gold_t2.columns
     if "plano_nutricionista" in cols_t2 or "reserva_discente" in cols_t2 or "rel_plano_humano" in cols_t2:
         erros.append("Gold T2 contém atributos de planejamento humano!")
-        
+
     sucesso = len(erros) == 0
     return {
         "teste": "1. Isolamento de Variáveis Alvo e Restrições de Horizonte",
         "sucesso": sucesso,
         "erros": erros,
-        "detalhe": "Nenhum alvo ou oráculo ex-post presente nas matrizes X. T2 estritamente autônomo." if sucesso else "; ".join(erros)
+        "detalhe": "Nenhum alvo, oráculo ou coluna de controle nas matrizes X. T2 sem quantitativo institucional." if sucesso else "; ".join(erros)
     }
 
 
-def testar_fronteira_temporal_todas_semanas(gold_t1: pd.DataFrame, gold_t2: pd.DataFrame) -> dict:
-    """Verifica em 100% das emissões se a data máxima de treino é anterior à sexta-feira de corte."""
+def testar_fronteira_temporal_todas_semanas(gold_t1: pd.DataFrame, gold_t2: pd.DataFrame, avaliador: Callable = avaliar_um_algoritmo) -> dict:
+    """Registra os fits reais do walk-forward e verifica max(data_treino) < origem em cada emissão."""
+    colunas = definir_cenarios_features()[CENARIO_AUDITADO]
     erros = []
-    total_semanas_verificadas = 0
-    
-    for nome_horiz, df in [("t1", gold_t1), ("t2", gold_t2)]:
-        origens = sorted(df["origem"].unique())
-        for origem in origens:
-            total_semanas_verificadas += 1
-            treino = df[(df["data"] < origem) & df["usar_no_treino"] & df["consumo"].notna()]
-            if not treino.empty:
-                max_treino = treino["data"].max()
-                if max_treino >= origem:
-                    erros.append(f"{nome_horiz} na emissão {origem.date()} usou dado de treino da data {max_treino.date()}")
-                    
+    emissoes = 0
+    sem_dias = []
+
+    for nome_horiz, df in (("t1", gold_t1), ("t2", gold_t2)):
+        cols = [c for c in colunas if c in df.columns]
+        origens = origens_de_2026(df)
+        registros = registrar_chamadas(df, nome_horiz, cols, origens, avaliador)
+        vistas = set()
+        for reg in registros:
+            origem = df.loc[reg["alvo"], "origem"].iloc[0]
+            vistas.add(origem)
+            emissoes += 1
+            max_treino = df.loc[reg["treino"], "data"].max()
+            if max_treino >= origem:
+                erros.append(f"{nome_horiz} na emissão {origem.date()} treinou com a data {max_treino.date()}")
+        sem_dias += [f"{nome_horiz} {pd.Timestamp(o).date()}" for o in origens if o not in vistas]
+
     sucesso = len(erros) == 0
     return {
-        "teste": "2. Fronteira Temporal Estrita em 100% das Semanas (max(treino) < origem)",
+        "teste": "2. Fronteira Temporal nas Chamadas Reais de Treino (max(treino) < origem)",
         "sucesso": sucesso,
-        "semanas_auditadas": total_semanas_verificadas,
+        "semanas_auditadas": emissoes,
+        "emissoes_sem_dias_avaliaveis": sem_dias,
         "erros": erros,
-        "detalhe": f"Todas as {total_semanas_verificadas} semanas auditadas respeitaram estritamente max(treino) < corte." if sucesso else "; ".join(erros)
+        "detalhe": f"{emissoes} emissões com fit registrado; {len(sem_dias)} sem dias avaliáveis: {sem_dias}." if sucesso else "; ".join(erros[:5])
     }
 
 
-def testar_invariancia_adversarial_modelos(gold_t1: pd.DataFrame, origens_amostra: List[str]) -> dict:
-    """Embaralha todo o consumo futuro e comprova que os modelos de ML geram previsões 100% idênticas."""
+def testar_selecao_do_teste(gold_t1: pd.DataFrame, avaliador: Callable = avaliar_um_algoritmo) -> dict:
+    """Confirma que todos os dias de 2026 com consumo entram no teste."""
+    cols = [c for c in definir_cenarios_features()[CENARIO_AUDITADO] if c in gold_t1.columns]
+    origens = origens_de_2026(gold_t1)
+    registros = registrar_chamadas(gold_t1, "t1", cols, origens, avaliador)
+
+    avaliados = {i for reg in registros for i in reg["alvo"]}
+    esperados = set(gold_t1[gold_t1["origem"].isin(origens) & gold_t1["consumo"].notna()].index)
+    ausentes = gold_t1.loc[sorted(esperados - avaliados), "data"].dt.strftime("%Y-%m-%d").tolist()
+
+    sucesso = len(ausentes) == 0
+    erros = [f"Dias com consumo fora do teste: {ausentes}"] if ausentes else []
+    return {
+        "teste": "3. Seleção do Teste sem Colunas Derivadas do Resultado",
+        "sucesso": sucesso,
+        "dias_avaliados": len(avaliados),
+        "erros": erros,
+        "detalhe": f"{len(avaliados)} de {len(esperados)} dias com consumo foram avaliados." if sucesso else "; ".join(erros)
+    }
+
+
+def corromper_futuro(gold: pd.DataFrame, origem: pd.Timestamp, gerador: np.random.Generator) -> pd.DataFrame:
+    """Substitui por ruído tudo o que só seria conhecido depois do corte."""
+    corrompido = gold.copy()
+    eh_futuro = corrompido["data"] >= origem
+    tem_consumo = eh_futuro & corrompido["consumo"].notna()
+    corrompido.loc[tem_consumo, "consumo"] = gerador.integers(1, 500, tem_consumo.sum()).astype(float)
+    corrompido.loc[tem_consumo, "alvo_relativo"] = gerador.uniform(0.2, 2.5, tem_consumo.sum())
+    corrompido.loc[eh_futuro, "usar_no_treino"] = ~corrompido.loc[eh_futuro, "usar_no_treino"]
+    corrompido.loc[eh_futuro, "tratamento"] = "corrompido"
+    return corrompido
+
+
+def testar_invariancia_adversarial_modelos(
+    gold_t1: pd.DataFrame,
+    origens_amostra: List[str],
+    colunas: Optional[List[str]] = None,
+    avaliador: Callable = avaliar_um_algoritmo,
+    preparar: Callable = lambda gold: gold
+) -> dict:
+    """Corrompe o futuro e mede a diferença real entre as previsões da avaliação."""
     gerador = np.random.default_rng(SEMENTE_ALEATORIA)
     catalogo = obter_catalogo_modelos()
-    cenarios = definir_cenarios_features()
-    cols_c1 = [c for c in cenarios["Cenario_1_Base_Cardapio"] if c in gold_t1.columns]
-    
-    modelos_teste = ["Ridge", "Ensemble_Bagging_ExtraTrees", "Ensemble_Boosting_Gradient"]
+    if colunas is None:
+        colunas = [c for c in definir_cenarios_features()[CENARIO_AUDITADO] if c in gold_t1.columns]
+
     erros = []
     detalhes = []
-    
+
     for origem_str in origens_amostra:
         origem = pd.Timestamp(origem_str)
-        alvo = gold_t1[(gold_t1["origem"] == origem) & gold_t1["consumo"].notna() & gold_t1["usar_no_treino"]]
-        if alvo.empty:
-            continue
-            
-        data_inicio = origem - pd.DateOffset(months=12)
-        
-        # 1. Dataset Original
-        treino_orig = gold_t1[
-            (gold_t1["data"] < origem) & (gold_t1["data"] >= data_inicio) &
-            gold_t1["usar_no_treino"] & gold_t1["consumo"].notna() & gold_t1["alvo_relativo"].notna()
-        ]
-        
-        # 2. Dataset Contaminado Adversarialmente no Futuro
-        gold_corrompido = gold_t1.copy()
-        eh_futuro = (gold_corrompido["data"] >= origem) & gold_corrompido["consumo"].notna()
-        gold_corrompido.loc[eh_futuro, "consumo"] = gerador.integers(1, 500, eh_futuro.sum()).astype(float)
-        gold_corrompido.loc[eh_futuro, "alvo_relativo"] = gerador.uniform(0.2, 2.5, eh_futuro.sum())
-        
-        treino_corr = gold_corrompido[
-            (gold_corrompido["data"] < origem) & (gold_corrompido["data"] >= data_inicio) &
-            gold_corrompido["usar_no_treino"] & gold_corrompido["consumo"].notna() & gold_corrompido["alvo_relativo"].notna()
-        ]
-        
-        for nome_m in modelos_teste:
-            construtor = catalogo[nome_m]["construtor"]
-            
-            # Treina no original
-            m_orig = construtor()
-            m_orig.fit(treino_orig[cols_c1], treino_orig["alvo_relativo"].clip(*LIMITES_ALVO))
-            pred_orig = m_orig.predict(alvo[cols_c1])
-            
-            # Treina no contaminado
-            m_corr = construtor()
-            m_corr.fit(treino_corr[cols_c1], treino_corr["alvo_relativo"].clip(*LIMITES_ALVO))
-            pred_corr = m_corr.predict(alvo[cols_c1])
-            
-            diff_max = float(np.max(np.abs(pred_orig - pred_corr)))
-            if diff_max > 1e-6:
-                erros.append(f"Vazamento detectado em {nome_m} na data {origem_str}: diff_max = {diff_max}")
-                
-        detalhes.append(f"Emissão {origem.strftime('%d/%m/%Y')}: Futuro corrompido em {eh_futuro.sum()} dias -> Predições dos modelos IDÊNTICAS (diff = 0.000000).")
-        
+        corrompido = corromper_futuro(gold_t1, origem, gerador)
+        maior_dif = 0.0
+
+        for nome_m in MODELOS_INVARIANCIA:
+            info = catalogo[nome_m]
+            _, pred_orig = avaliador(nome_m, info, "t1", CENARIO_AUDITADO, colunas, preparar(gold_t1), [origem])
+            _, pred_corr = avaliador(nome_m, info, "t1", CENARIO_AUDITADO, colunas, preparar(corrompido), [origem])
+            if not pred_orig:
+                erros.append(f"Emissão {origem_str} sem dias avaliáveis para {nome_m}")
+                continue
+            dif = np.abs(np.array([p["previsao"] for p in pred_orig]) - np.array([p["previsao"] for p in pred_corr]))
+            maior_dif = max(maior_dif, float(dif.max()))
+            if dif.max() > 1e-6:
+                erros.append(f"Vazamento detectado em {nome_m} na emissão {origem_str}: diferença máxima = {dif.max():.4f}")
+
+        detalhes.append(f"Emissão {origem.strftime('%d/%m/%Y')}: maior diferença entre previsões = {maior_dif:.6f} refeições.")
+
     sucesso = len(erros) == 0
     return {
-        "teste": "3. Invariância Adversarial dos Modelos com Futuro Embaralhado",
+        "teste": "4. Invariância Adversarial com Consumo, Alvo e Rótulos Futuros Corrompidos",
         "sucesso": sucesso,
         "erros": erros,
         "detalhes": detalhes,
-        "conclusao": "PROVADO: Os algoritmos de Machine Learning são 100% cegos para qualquer dado futuro." if sucesso else "FALHA DE ISOLAMENTO"
+        "conclusao": f"{len(origens_amostra)} emissões testadas em {len(MODELOS_INVARIANCIA)} modelos." if sucesso else "FALHA DE ISOLAMENTO"
     }
 
 
 def executar_auditoria_completa_vazamento() -> dict:
-    """Executa a bateria completa de testes de vazamento e salva o relatório oficial."""
+    """Executa a bateria completa de testes de vazamento e salva o relatório."""
     gold_t1 = pd.read_parquet(GOLD / "gold_t1.parquet")
     gold_t2 = pd.read_parquet(GOLD / "gold_t2.parquet")
     cenarios = definir_cenarios_features()
-    
-    t1 = testar_isolamento_variaveis_alvo(cenarios, gold_t1, gold_t2)
-    t2 = testar_fronteira_temporal_todas_semanas(gold_t1, gold_t2)
-    
-    origens_amostra = ["2024-03-08", "2024-09-13", "2025-05-09", "2026-03-06", "2026-09-04"]
-    t3 = testar_invariancia_adversarial_modelos(gold_t1, origens_amostra)
-    
-    todos_ok = t1["sucesso"] and t2["sucesso"] and t3["sucesso"]
+
+    testes = [
+        testar_isolamento_variaveis_alvo(cenarios, gold_t1, gold_t2),
+        testar_fronteira_temporal_todas_semanas(gold_t1, gold_t2),
+        testar_selecao_do_teste(gold_t1),
+        testar_invariancia_adversarial_modelos(gold_t1, ORIGENS_AMOSTRA)
+    ]
+
     relatorio = {
         "data_auditoria": pd.Timestamp.now().strftime("%d/%m/%Y %H:%M:%S"),
-        "status_geral": "APROVADO - ZERO DATA LEAKAGE" if todos_ok else "REPROVADO",
-        "testes": [t1, t2, t3]
+        "status_geral": "APROVADO NOS TESTES EXECUTADOS" if all(t["sucesso"] for t in testes) else "REPROVADO",
+        "alcance": "Cobre consumo, rótulos e oráculos na avaliação da pesquisa. Não cobre o aplicativo.",
+        "testes": testes
     }
-    
+
     with open(PASTA_AUDITORIA / "relatorio_teste_vazamento_modelos.json", "w", encoding="utf-8") as f:
         json.dump(relatorio, f, indent=2, ensure_ascii=False)
-        
+
     return relatorio
 
 
 if __name__ == "__main__":
     rel = executar_auditoria_completa_vazamento()
     print("\n=======================================================")
-    print(f"RELATÓRIO OFICIAL DE NÃO-VAZAMENTO: {rel['status_geral']}")
+    print(f"RELATÓRIO DE AUDITORIA DE VAZAMENTO: {rel['status_geral']}")
     print("=======================================================")
     for teste in rel["testes"]:
         tag = "[OK] APROVADO" if teste["sucesso"] else "[FALHA] REPROVADO"
@@ -187,4 +237,3 @@ if __name__ == "__main__":
         if teste["erros"]:
             for e in teste["erros"]:
                 print(f"  ! ERRO: {e}")
-

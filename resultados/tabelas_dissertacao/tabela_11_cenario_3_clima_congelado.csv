@@ -1,0 +1,10 @@
+﻿Recorte;Metodo;n_dias;MAE;RMSE;R2;WAPE_pct;Sobra_Total_ref;Deficit_Total_ref;Dias_com_Deficit;Taxa_Deficit_pct;Dias_com_Sobra;Taxa_Sobra_pct;Saldo_Operacional_ref;Custo_Potencial_Sobras_RS
+Todos os dias (N=33);Nutricionista Institucional;33;39.48;65.46;-0.582;21.9;972;331;11 (33.3%);33.3;22 (66.7%);66.7;641;13608.0
+Todos os dias (N=33);ExtraTrees Congelado - Cenário 2;33;34.0;56.86;-0.194;18.86;722;400;20 (60.6%);60.6;12 (36.4%);36.4;322;10108.0
+Todos os dias (N=33);ExtraTrees Congelado - Cenário 3;33;34.39;56.48;-0.178;19.08;702;433;21 (63.6%);63.6;12 (36.4%);36.4;269;9828.0
+Sem evento registrado (N=28);Nutricionista Institucional;28;22.14;30.46;-1.71;11.1;289;331;11 (39.3%);39.3;17 (60.7%);60.7;-42;4046.0
+Sem evento registrado (N=28);ExtraTrees Congelado - Cenário 2;28;18.29;22.58;-0.49;9.16;112;400;20 (71.4%);71.4;7 (25.0%);25.0;-288;1568.0
+Sem evento registrado (N=28);ExtraTrees Congelado - Cenário 3;28;19.54;23.7;-0.641;9.79;114;433;21 (75.0%);75.0;7 (25.0%);25.0;-319;1596.0
+Dias de enchente (N=5);Nutricionista Institucional;5;136.6;151.93;-9.282;188.67;683;0;0 (0.0%);0.0;5 (100.0%);100.0;683;9562.0
+Dias de enchente (N=5);ExtraTrees Congelado - Cenário 2;5;122.0;135.95;-7.233;168.51;610;0;0 (0.0%);0.0;5 (100.0%);100.0;610;8540.0
+Dias de enchente (N=5);ExtraTrees Congelado - Cenário 3;5;117.6;133.82;-6.976;162.43;588;0;0 (0.0%);0.0;5 (100.0%);100.0;588;8232.0

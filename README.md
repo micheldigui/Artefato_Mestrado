@@ -17,27 +17,36 @@ O artefato foi concebido sob o rigor da **Design Science Research (DSR)**, respo
 
 ---
 
-## 🛡️ Rigor Científico e Zero Data Leakage
+## 🛡️ Rigor Científico e Controle de Vazamento
 
-Uma das principais contribuições da pesquisa é a eliminação matemática de **qualquer vazamento temporal de dados** (*Zero Data Leakage*):
-- **Corte Temporal Estrito:** A cada sexta-feira de emissão de corte ($\text{origem}$), é garantido que $\max(\text{treino}) < \text{origem}$.
-- **Auditoria Adversarial Automatizada:** Testes unitários com contaminação proposital do consumo futuro comprovam invariância total ($\Delta = 0.000000$) nas previsões históricas.
-- **Isolamento de Variáveis Ex-Post:** Variáveis climáticas observadas na data do almoço atuam apenas como "Oráculo Ex-Post" em estudos retrospectivos de ablação; para inferência preditiva, utilizam-se unicamente as previsões horárias arquivadas no momento da emissão.
+A pesquisa separa o que estava disponível na sexta-feira de corte do que só seria conhecido depois:
+- **Corte Temporal:** A cada sexta de emissão ($\text{origem}$), o treino usa apenas dias anteriores ($\max(\text{treino}) < \text{origem}$). Os atributos usam consumo anterior à sexta.
+- **Informação Disponível na Emissão:** Cardápio, calendário, previsão de clima e, no $T+1$, o quantitativo institucional, fechado até a sexta à tarde (reservas discentes até 2025 e estimativa da nutricionista em 2026). O $T+2$ não usa quantitativo institucional.
+- **Dias Atípicos:** O registro só existe depois do consumo. Dias atípicos ficam fora do treino, dias de consumo muito baixo ficam fora dos lags das previsões seguintes, e todos continuam visíveis na avaliação.
+- **Auditoria Automatizada:** Os testes corrompem consumo, alvo e rótulos futuros, registram as chamadas reais de treino e confirmam que todos os dias com consumo entram no teste. Cada verificação é testada com vazamentos injetados de propósito.
+- **Alcance:** A auditoria cobre a avaliação da pesquisa. A disponibilidade de reservas, plano e cardápio na sexta é declarada pelo autor.
+- **Aplicativo:** Usa os mesmos modelos da pesquisa: Híbrido 50/50 no $T+1$ e ExtraTrees Cenário 2 no $T+2$, ambos congelados em 31/08/2026. O simulador corta os dados na sexta da emissão e nunca usa clima observado.
 
 ---
 
 ## 🏆 Principais Descobertas e Resultados
 
+Os resultados principais usam todos os dias com consumo. O recorte sem evento registrado retira apenas os 5 dias de enchente de setembro, e foi definido depois do fato. Diferenças em que o intervalo de 95% do bootstrap por semana inclui zero não são tratadas como vitória.
+
 1. **Torneio de Modelos e Ensembles:**
    - Implementação da taxonomia completa de aprendizado combinado: **Bagging** (*ExtraTrees, Random Forest*), **Boosting** (*Gradient Boosting, XGBoost, CatBoost, LightGBM, AdaBoost*), **Voting**, **Stacking**, **Blending** e **Cascading**.
-2. **Modelo Híbrido Ótimo ($T+1$):**
-   - A combinação convexa $\hat{y} = 0.50 \cdot \hat{y}_{\text{IA}} + 0.50 \cdot \hat{y}_{\text{nutri}}$ reduziu o erro da nutricionista de **24,86 para 21,43 refeições** no período retrospectivo e para **8,36 refeições** (WAPE de 4,08%) na operação estável de outubro.
-3. **Margens Conformais de Segurança (Conformal Prediction):**
-   - A adição de uma margem empírica de **+12 refeições (P85)** derrubou os dias com déficit de **43,4% para apenas 15,7%**, mantendo o custo fiscal de sobras em patamar ótimo de Pareto.
-4. **Teste Cego Prospectivo com Modelo Campeão Congelado em 31/08/2026:**
-   - O modelo campeão congelado na data de corte da qualificação superou o especialista humano isolado em todo o bimestre setembro-outubro (**MAE 18,29 vs 22,14 ref**).
-5. **Resiliência Climática nas Enchentes de Setembro de 2026:**
-   - Durante as cheias extremas no Alto Tietê, enquanto o humano insistiu em metas elevadas e gerou 683 refeições desperdiçadas em uma semana, a IA reduziu as estimativas e errou **30,56 refeições a menos que o humano**.
+2. **Período Retrospectivo (Fev-Ago/2026, 123 dias, walk-forward):**
+   - Nutricionista com MAE 26,21, ExtraTrees 27,79 e Modelo Híbrido 50/50 23,78. A diferença entre o híbrido e a nutricionista não é estatisticamente clara (-2,43; intervalo de -5,60 a 0,57).
+3. **Período Prospectivo (Set-Out/2026, modelo ExtraTrees congelado em 31/08/2026):**
+   - Com todos os 33 dias: Nutricionista 39,48, ExtraTrees 34,00 e Híbrido 34,36.
+   - Sem evento registrado (28 dias): Nutricionista 22,14, ExtraTrees 18,29 e Híbrido 17,36.
+   - O híbrido supera a nutricionista nos dois recortes (-5,12; intervalo de -7,92 a -2,23 com 33 dias). Híbrido e ExtraTrees não têm diferença clara entre si.
+   - As métricas foram reprocessadas em 01/11/2026. O modelo é reconstruído com dados até 31/08, e sua especificação difere do ExtraTrees do torneio.
+4. **Margens Empíricas por Quantil:**
+   - Calibrada em Fev-Ago, a margem P85 do híbrido é de **+21 refeições**. Ela reduz os dias com déficit de 46,3% para 13,8% em Fev-Ago, ao custo de mais sobras (R$ 53.200,00 contra R$ 27.692,00). Em Set-Out, sem recalibrar, a cobertura é de 84,8%.
+5. **Enchentes de Setembro de 2026:**
+   - Nenhum método antecipou os eventos. A nutricionista gerou 683 refeições de sobra nos 5 dias, e o ExtraTrees congelado, 610: uma diferença de **14,60 refeições por dia**, com previsões ainda muito acima do consumo real.
+   - A previsão de clima sinalizou chuva forte em 09 e 10/09, mas não em 15 e 23/09, os dias de menor consumo. O Cenário 3 reduz pouco o erro nesses dias (117,60 contra 122,00) e piora os demais (19,54 contra 18,29).
 
 ---
 
@@ -60,6 +69,14 @@ python executar_app.py
 
 Acesse a interface no navegador em `http://localhost:8501`.
 
+### 3. Configurar as Senhas de Edição
+O lançamento de dados exige senhas em `.streamlit/secrets.toml`, arquivo que não vai para o repositório, ou nos Secrets do Streamlit Cloud:
+```toml
+SENHA_NUTRI = "defina-uma-senha"
+SENHA_ADMIN = "defina-outra-senha"
+```
+Sem essas chaves, o aplicativo abre em modo de leitura.
+
 ---
 
 ## 🧪 Suíte de Testes Automatizados
@@ -70,7 +87,7 @@ pytest -v
 ```
 
 Testes inclusos:
-- `test_zero_leakage.py`: Executa a auditoria adversarial e valida corte temporal em 100% das semanas.
+- `test_zero_leakage.py`: Executa a auditoria da avaliação e confirma que vazamentos injetados são detectados.
 - `test_data_integrity.py`: Valida a integridade das camadas Gold e a presença das tabelas e figuras oficiais.
 - `test_app_syntax.py`: Garante que a aplicação web e seus módulos compilam sem erros.
 
@@ -96,7 +113,7 @@ Testes inclusos:
 │   ├── auditoria/              <- Relatório JSON de não-vazamento
 │   ├── figuras/                <- Suíte de 12 figuras EDA + 11 figuras Dissertação
 │   ├── modelos/                <- Parquet e CSV do torneio walk-forward
-│   └── tabelas_dissertacao/    <- 8 tabelas CSV estruturadas (Tabelas 03 a 10)
+│   └── tabelas_dissertacao/    <- Tabelas CSV estruturadas (Tabelas 03 a 12)
 ├── src/                        <- Código-fonte modular
 │   ├── app/                    <- Aplicação web interativa (Streamlit)
 │   └── core/                   <- Pipelines de dados, modelos e auditoria

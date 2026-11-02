@@ -26,6 +26,7 @@ import numpy as np
 import altair as alt
 import plotly.express as px
 import plotly.graph_objects as go
+import hmac
 import html
 from datetime import datetime, date, timedelta
 import importlib
@@ -55,7 +56,11 @@ try:
         MODELOS_RANKING,
         MARGENS_INFO,
         FERIADOS_FIXOS_BR,
-        obter_modelos_treinados,
+        CENARIO_PADRAO,
+        MARGEM_PADRAO,
+        MODELO_HIBRIDO,
+        MODELO_IA,
+        obter_clima_emissao,
         simular_previsao_data
     )
     import clima
@@ -86,7 +91,11 @@ except ImportError:
         MODELOS_RANKING,
         MARGENS_INFO,
         FERIADOS_FIXOS_BR,
-        obter_modelos_treinados,
+        CENARIO_PADRAO,
+        MARGEM_PADRAO,
+        MODELO_HIBRIDO,
+        MODELO_IA,
+        obter_clima_emissao,
         simular_previsao_data
     )
     from .clima import obter_clima_data
@@ -113,8 +122,13 @@ def obter_credencial(chave, padrao):
     except Exception:
         return padrao
 
-SENHA_NUTRI = str(obter_credencial("SENHA_NUTRI", "nutri2026"))
-SENHA_ADMIN = str(obter_credencial("SENHA_ADMIN", "admin2026"))
+SENHA_NUTRI = str(obter_credencial("SENHA_NUTRI", ""))
+SENHA_ADMIN = str(obter_credencial("SENHA_ADMIN", ""))
+
+
+def senha_confere(digitada, esperada):
+    """Sem senha configurada em st.secrets, a edição permanece bloqueada."""
+    return bool(esperada) and hmac.compare_digest(digitada.encode("utf-8"), esperada.encode("utf-8"))
 
 # ==============================================================================
 # BARRA LATERAL FIXA (SIDEBAR): NAVEGAÇÃO PRINCIPAL E CONTROLES DISCRETOS
@@ -1059,12 +1073,12 @@ def renderizar_painel_transparencia_dados(df_horizonte, titulo_painel="Diagnóst
             b_card = "⚠️ Padrão Neutro (Não Cadastrado)"
             cor_card = "#92400e"
             bg_card = "#fef3c7"
-            sub_card = "Cardápio não inserido. Aplicando perfil neutro (Frango Assado)."
+            sub_card = "Cardápio não inserido. A previsão segue sem o efeito do prato."
             alerta_cardapio = (
                 f"⚠️ **Atenção Operacional — Cardápio Não Cadastrado ({horizonte_rotulo}):** "
                 "O cardápio oficial para este período ainda não foi inserido na base pelo refeitório. "
-                "Os modelos preditivos estão aplicando o perfil escolar regular neutro (Frango Assado). "
-                "As previsões continuam estatisticamente sólidas e estáveis baseadas na inércia de consumo recente e no ritmo semanal letivo. "
+                "A previsão segue sem o efeito do prato. "
+                "Ela usa o consumo recente e o calendário letivo. "
                 "Para refinar o preparo com a atratividade do prato real, realize o cadastro na aba **✍️ Cadastrar Dados**."
             )
         else:
@@ -1072,7 +1086,7 @@ def renderizar_painel_transparencia_dados(df_horizonte, titulo_painel="Diagnóst
             cor_card = "#92400e"
             bg_card = "#fef3c7"
             sub_card = f"{num_oficiais} dias com prato oficial e {total_letivos - num_oficiais} com perfil neutro."
-            alerta_cardapio = f"⚠️ **Cardápio Parcialmente Cadastrado ({horizonte_rotulo}):** Alguns dias estão sem prato oficial lançado, aplicando perfil escolar regular neutro."
+            alerta_cardapio = f"⚠️ **Cardápio Parcialmente Cadastrado ({horizonte_rotulo}):** Alguns dias estão sem prato oficial lançado e seguem sem o efeito do prato. Perfil escolar regular neutro."
 
     # 2. Clima (Open-Meteo API vs Fallback)
     alerta_clima = None
@@ -2172,7 +2186,7 @@ if pagina_ativa == "Dashboard":
 elif pagina_ativa == "Previsões":
     st.markdown('<div class="story-badge">ETAPA 2 DE 6 • ORDEM DE PREPARO SEMANAL (t+1)</div>', unsafe_allow_html=True)
     st.markdown("### Previsões e Ordem de Preparo Semanal")
-    st.markdown('<p class="story-subtitle">Toda sexta-feira: consulte a recomendação diária calibrada para a próxima semana útil, embasada no modelo híbrido integrado à experiência da nutricionista e calibração conformal.</p>', unsafe_allow_html=True)
+    st.markdown('<p class="story-subtitle">Toda sexta-feira: consulte a recomendação diária calibrada para a próxima semana útil, embasada no modelo híbrido, que combina o ExtraTrees e o quantitativo informado pela nutricionista.</p>', unsafe_allow_html=True)
     
     renderizar_painel_explicativo(
         objetivo_rotina=(
@@ -2182,7 +2196,7 @@ elif pagina_ativa == "Previsões":
         como_foi_feito_ciencia=(
             "**Combinação Inteligente (Modelo Híbrido 50/50 + Margem de Segurança):** "
             "O sistema junta a experiência prática da nutricionista com modelos preditivos de inteligência artificial e aprendizado de máquina. "
-            "Para não deixar nenhum aluno com fome, adiciona uma folga calculada (+12 a +18 ref), que é reduzida se houver previsão de tempestade."
+            "Para reduzir o risco de falta, adiciona uma margem calculada a partir das faltas observadas de fevereiro a agosto de 2026."
         ),
         como_usar_passos=(
             "1. **Toda sexta-feira:** Veja os cartões abaixo com a 'Ordem de Preparo' para cada dia da semana.\n"
@@ -2195,12 +2209,12 @@ elif pagina_ativa == "Previsões":
     with st.expander("Ajuste Fino de Algoritmos e Margens de Segurança (Opcional)", expanded=False):
         col_c1, col_c2, col_c3 = st.columns(3)
         with col_c1:
-            cenario_t1 = st.selectbox("Cenário de Dados (Ablation Study):", list(CENARIOS_DICT.keys()), index=len(CENARIOS_DICT)-1, key="cfg_cen_t1")
+            cenario_t1 = st.selectbox("Cenário de Dados (Ablation Study):", list(CENARIOS_DICT.keys()), index=list(CENARIOS_DICT.keys()).index(CENARIO_PADRAO), key="cfg_cen_t1")
             st.caption(f"{CENARIOS_DICT[cenario_t1]['descricao']}")
         with col_c2:
             modelo_t1 = st.selectbox("Algoritmo Ativo:", list(MODELOS_RANKING.keys()), index=0, key="cfg_mod_t1")
         with col_c3:
-            margem_t1 = st.selectbox("Margem de Segurança Conformal:", list(MARGENS_INFO.keys()), index=0, key="cfg_mar_t1")
+            margem_t1 = st.selectbox("Margem de Segurança:", list(MARGENS_INFO.keys()), index=0, key="cfg_mar_t1")
 
     df_t1, df_feat_t1 = executar_pipeline_previsao(
         horizonte_alvo="Semana_t1",
@@ -2365,7 +2379,7 @@ elif pagina_ativa == "Previsões":
                      Quer simular datas específicas, modelos ou cenários alternativos?
                 </div>
                 <div style="font-size: 13px; color: var(--text-muted); line-height: 1.5;">
-                    O <b>Simulador de Cenários</b> possui uma página dedicada na barra superior! Nele você pode escolher qualquer data (passada ou futura), comparar os diferentes modelos preditivos da pesquisa (Modelo Híbrido, Modelos de IA e Modelos Estatísticos), ajustar margens de proteção alimentar e verificar a influência de cardápio e clima em tempo real.
+                    O <b>Simulador de Cenários</b> possui uma página dedicada na barra superior! Nele você pode escolher qualquer data (passada ou futura), comparar os modelos da pesquisa (Modelo Híbrido, ExtraTrees e planejamento manual), ajustar margens de proteção alimentar e verificar a influência de cardápio e clima em tempo real.
                 </div>
             </div>
             <div>
@@ -2380,7 +2394,7 @@ elif pagina_ativa == "Previsões":
 elif pagina_ativa == "Simulador de Cenários":
     st.markdown('<div class="story-badge">ETAPA 3 DE 6 • LABORATÓRIO DE SIMULAÇÕES ("E SE...?")</div>', unsafe_allow_html=True)
     st.markdown("### Simulador de Cenários e Decisão Operacional")
-    st.markdown('<p class="story-subtitle">Simule qualquer data do calendário com integridade temporal estrita (walk-forward). Teste os algoritmos treinados da pesquisa, cenários de dados e margens de proteção alimentar.</p>', unsafe_allow_html=True)
+    st.markdown('<p class="story-subtitle">Simule uma data como se a decisão fosse tomada na sexta de corte. Compare os modelos da pesquisa, cenários de dados e margens de proteção alimentar.</p>', unsafe_allow_html=True)
     
     renderizar_painel_explicativo(
         objetivo_rotina=(
@@ -2389,9 +2403,9 @@ elif pagina_ativa == "Simulador de Cenários":
             "cenários de tempestade e diferentes margens de segurança antes de autorizar a ordem de preparo."
         ),
         como_foi_feito_ciencia=(
-            "**Metodologia Walk-Forward com isolamento temporal estrito (Zero Data Leakage).** "
-            "Ao simular uma data no passado ou futuro, o artefato é alimentado exclusivamente por dados observados "
-            "antes daquele dia (médias móveis e defasagens reais). Aplica os modelos preditivos da pesquisa (Modelo Híbrido, Modelos de IA e Modelos Estatísticos com margem de segurança calibrada)."
+"**Simulação na sexta de corte.** "
+            "O artefato usa somente o consumo anterior à sexta da emissão e a previsão de clima arquivada, nunca o clima observado. "
+            "Datas até 31/08/2026 são refeitas em walk-forward com treino até aquela sexta. As demais usam o modelo congelado em 31/08/2026."
         ),
         como_usar_passos=(
             "1. **Escolha a data no calendário** e defina o objetivo (Consumo diário t+1 ou Compras quinzenais t+2).\n"
@@ -2439,7 +2453,7 @@ elif pagina_ativa == "Simulador de Cenários":
             )
             obj_chave = "consumo" if "Consumo" in objetivo_sel else "compras"
             
-            # Se o objetivo for Compras (t+2), Cenário 4 não se aplica (Zero Leakage: sem quantitativo institucional antecipado)
+            # Em Compras (t+2) não existe quantitativo institucional
             if obj_chave == "compras":
                 opcoes_cenarios = [c for c in CENARIOS_DICT.keys() if "Cenário 4" not in c]
                 opcoes_modelos = [m for m in MODELOS_RANKING.keys() if "Híbrido" not in m and "Manual" not in m]
@@ -2450,7 +2464,7 @@ elif pagina_ativa == "Simulador de Cenários":
             cenario_sel = st.selectbox(
                 "Cenário de Dados (Ablation Study):",
                 opcoes_cenarios,
-                index=len(opcoes_cenarios) - 1,
+                index=opcoes_cenarios.index(CENARIO_PADRAO),
                 key="sim_cenario_select"
             )
             st.caption(f"ℹ️ {CENARIOS_DICT[cenario_sel]['descricao']}")
@@ -2517,7 +2531,7 @@ elif pagina_ativa == "Simulador de Cenários":
             cen_cfg = CENARIOS_DICT[cenario_sel]
             usar_cardapio = cen_cfg["usar_cardapio"]
             usar_clima = cen_cfg["usar_clima"]
-            usar_nutri = cen_cfg.get("usar_nutri", True) and (obj_chave == "consumo")
+            usar_nutri = (cen_cfg.get("usar_nutri", False) or "Híbrido" in modelo_sel or "Manual" in modelo_sel) and (obj_chave == "consumo")
             
             # --- Validação A: Cardápio ---
             st.markdown("######  Cardápio (Prato Principal)")
@@ -2569,25 +2583,11 @@ elif pagina_ativa == "Simulador de Cenários":
                 
             # --- Validação B: Clima ---
             st.markdown("###### Condições Climáticas")
-            tem_clima = False
-            chuva_existente = 0.0
-            temp_existente = 25.0
-            
-            origem_clima_rotulo = "Consolidado na Base"
-            if not row_fato.empty and pd.notna(row_fato.iloc[0].get("precipitation_sum")):
-                tem_clima = True
-                chuva_existente = float(row_fato.iloc[0]["precipitation_sum"])
-                temp_existente = float(row_fato.iloc[0].get("temperature_2m_max", 25.0))
-                origem_clima_rotulo = "Base Histórica"
-            else:
-                # Consulta automática e instantânea à API Open-Meteo
-                c_api, t_api, f_api = obter_clima_data(data_iso_str)
-                if c_api is not None and t_api is not None:
-                    tem_clima = True
-                    chuva_existente = float(c_api)
-                    temp_existente = float(t_api)
-                    origem_clima_rotulo = f"{f_api} (Satélite)"
-                
+            c_prev, t_prev, origem_clima_rotulo = obter_clima_emissao(data_sim, "t1" if obj_chave == "consumo" else "t2")
+            tem_clima = c_prev is not None and t_prev is not None
+            chuva_existente = float(c_prev) if tem_clima else 0.0
+            temp_existente = float(t_prev) if tem_clima else 25.0
+
             chuva_custom_override = None
             temp_custom_override = None
             
@@ -2599,7 +2599,7 @@ elif pagina_ativa == "Simulador de Cenários":
                         chuva_custom_override = st.slider("Chuva Hipotética (mm):", min_value=0.0, max_value=40.0, value=chuva_existente, step=1.0, key="sim_chuva_slider_sub")
                         temp_custom_override = st.slider("Temperatura Máx (°C):", min_value=12.0, max_value=38.0, value=temp_existente, step=0.5, key="sim_temp_slider_sub")
                 else:
-                    st.warning("**Clima não localizado nos satélites para esta data.**")
+                    st.warning("**Previsão de clima não arquivada para esta data.**")
                     st.caption("Ajuste a meteorologia estimada para que os algoritmos calculem a sensibilidade climática:")
                     chuva_custom_override = st.slider("Precipitação Prevista (mm):", min_value=0.0, max_value=40.0, value=0.0, step=1.0, key="sim_chuva_slider_empty")
                     temp_custom_override = st.slider("Temperatura Máxima (°C):", min_value=12.0, max_value=38.0, value=25.0, step=0.5, key="sim_temp_slider_empty")
@@ -2611,7 +2611,7 @@ elif pagina_ativa == "Simulador de Cenários":
             if usar_nutri:
                 st.markdown("######  Quantitativo Institucional da Nutrição")
                 tem_nutri = False
-                nutri_existente = 182.7
+                nutri_existente = None
                 if not row_plan.empty and pd.notna(row_plan.iloc[0].get("planejado_nutri")) and float(row_plan.iloc[0].get("planejado_nutri", 0)) > 0:
                     tem_nutri = True
                     nutri_existente = float(row_plan.iloc[0]["planejado_nutri"])
@@ -2626,10 +2626,11 @@ elif pagina_ativa == "Simulador de Cenários":
                         nutri_custom_override = st.number_input("Novo Quantitativo:", min_value=50, max_value=300, value=int(round(nutri_existente)), step=1, key="sim_nutri_num_sub")
                 else:
                     st.warning("**Meta da Nutrição não cadastrada para esta data.**")
-                    st.caption("A pesquisa identificou média institucional de 182,7 ref/dia. Informe o valor para compor o modelo híbrido:")
-                    nutri_custom_override = st.number_input("Quantitativo Institucional da Simulação:", min_value=50, max_value=300, value=183, step=1, key="sim_nutri_num_empty")
+                    st.caption("Informe o valor para compor o modelo híbrido. Sem ele, o resultado usa apenas o ExtraTrees.")
+                    valor_nutri_sim = st.number_input("Quantitativo Institucional da Simulação (0 = não informado):", min_value=0, max_value=300, value=0, step=1, key="sim_nutri_num_empty")
+                    nutri_custom_override = valor_nutri_sim if valor_nutri_sim > 0 else None
 
-    # Executar Simulação Preditiva com Rigor Científico Walk-Forward
+    # Executar a simulação na sexta de corte da data escolhida
     resultado_sim = simular_previsao_data(
         data_alvo=data_sim,
         objetivo=obj_chave,
@@ -2647,7 +2648,7 @@ elif pagina_ativa == "Simulador de Cenários":
 
     st.markdown("---")
     st.markdown("#### Resultado da Simulação")
-    st.caption("Inferência calculada estritamente com histórico de dados anterior à data selecionada (Walk-Forward).")
+    st.caption(f"Sexta de corte: {resultado_sim['origem'].strftime('%d/%m/%Y')}. Modelo usado: {resultado_sim['regime_modelo']}.")
 
     # Indicadores Principais
     c_kpi1, c_kpi2, c_kpi3, c_kpi4 = st.columns(4)
@@ -2679,7 +2680,7 @@ elif pagina_ativa == "Simulador de Cenários":
             st.metric("Margem de Segurança", f"+{int(round(resultado_sim['margem_val']))} ref", delta=f"Política: {margem_sel.split('(')[0].strip()}")
     with c_kpi4:
         st.metric(
-            "Histórico Walk-Forward",
+            "Histórico até a Sexta de Corte",
             f"{resultado_sim['dias_historico_utilizados']} dias",
             delta=f"MM 5d: {resultado_sim['mm5']} ref"
         )
@@ -2709,7 +2710,7 @@ elif pagina_ativa == "Simulador de Cenários":
             if saldo_dia >= 0:
                 st.success(f"**Proteção Alimentar Assegurada:** A recomendação com margem ({pred_val} ref) atendeu plenamente aos estudantes ({real_val} ref), gerando folga segura de {saldo_dia} refeições sem risco de desabastecimento.")
             else:
-                st.warning(f"**Atenção:** A estimativa calculada ficou {abs(saldo_dia)} refeições abaixo da demanda real verificada. Recomenda-se utilizar a margem Conformal P85 (+12 a +18 ref) em datas com esta volatilidade.")
+                st.warning(f"**Atenção:** A estimativa calculada ficou {abs(saldo_dia)} refeições abaixo da demanda real verificada. Avalie a política de margem para datas com esta volatilidade.")
 
     # Alertas Operacionais Contextuais
     if resultado_sim["alertas"]:
@@ -2725,10 +2726,10 @@ elif pagina_ativa == "Simulador de Cenários":
                 st.info(alerta)
 
     # Detalhes Científicos e Vetor de Features
-    with st.expander(" Detalhes Científicos e Vetor de Features (Walk-Forward Isolation)"):
-        st.markdown("""
-        **Garantia de Não-Vazamento Temporal (Zero Data Leakage):**
-        Todas as variáveis preditivas (médias móveis e defasagens de consumo) foram geradas utilizando estritamente dados anteriores a esta data (`data_dt < data_alvo`).
+    with st.expander(" Detalhes Científicos e Atributos Utilizados"):
+        st.markdown(f"""
+        **Corte temporal:** as médias móveis e defasagens de consumo usam apenas dias anteriores à sexta de corte ({resultado_sim['origem'].strftime('%d/%m/%Y')}).
+        Dias com registro de atípico e dias com consumo muito baixo não entram nessas médias.
         """)
         col_f1, col_f2 = st.columns(2)
         with col_f1:
@@ -2740,8 +2741,8 @@ elif pagina_ativa == "Simulador de Cenários":
         with col_f2:
             st.markdown("**Entradas Consolidadas para os Modelos:**")
             st.write(f"- Proteína considerada: **{resultado_sim['prot_utilizada'].title()}** (Prato: {resultado_sim['prato_utilizado']})")
-            st.write(f"- Precipitação pluviométrica: **{resultado_sim['chuva_utilizada']:.1f} mm**")
-            st.write(f"- Temperatura máxima: **{resultado_sim['temp_utilizada']:.1f}°C**")
+            st.write(f"- Precipitação prevista: **{resultado_sim['chuva_utilizada']:.1f} mm**")
+            st.write(f"- Temperatura máxima prevista: **{resultado_sim['temp_utilizada']:.1f}°C**")
             if resultado_sim.get("nutri_utilizado") is not None and usar_nutri:
                 st.write(f"- Quantitativo institucional (Nutri): **{resultado_sim['nutri_utilizado']:.1f} ref**")
 
@@ -2751,7 +2752,7 @@ elif pagina_ativa == "Simulador de Cenários":
 elif pagina_ativa == "Compras & Suprimentos":
     st.markdown('<div class="story-badge">ETAPA 4 DE 6 • PLANEJAMENTO DE SUPRIMENTOS (t+2)</div>', unsafe_allow_html=True)
     st.markdown("###  Planejamento de Compras e Estoque — Janela Longa (10 a 14 dias)")
-    st.markdown('<p class="story-subtitle">A cada 15 dias: dimensione pedidos antecipados de carnes congeladas e mantimentos de despensa com auxílio da previsão climática estendida.</p>', unsafe_allow_html=True)
+    st.markdown('<p class="story-subtitle">A cada 15 dias: dimensione pedidos antecipados de carnes congeladas e mantimentos de despensa, sem depender de quantitativo humano.</p>', unsafe_allow_html=True)
     
     renderizar_painel_explicativo(
         objetivo_rotina=(
@@ -2759,9 +2760,9 @@ elif pagina_ativa == "Compras & Suprimentos":
             "Ajuda a equipe de suprimentos a dimensionar pedidos quinzenais de carnes congeladas, arroz, feijão e faturamento contratual."
         ),
         como_foi_feito_ciencia=(
-            "**Modelo Preditivo para Longo Prazo (Cenário 3: Base + Cardápio + Clima via Open-Meteo):** "
-            "A 14 dias de distância, o cardápio exato do dia ainda não está fechado. "
-            "A pesquisa provou que cruzar o histórico recente com o calendário escolar e a previsão meteorológica estendida de satélite gera a melhor estimativa para compras antecipadas."
+"**Modelo de Longo Prazo (ExtraTrees, Cenário 2: Consumo + Calendário + Cardápio):** "
+            "A 14 dias de distância, ainda não existe quantitativo institucional. "
+            "Por isso, as compras usam apenas o histórico recente, o calendário escolar e o cardápio já preparado."
         ),
         como_usar_passos=(
             "1. **Consulte a cada 15 dias** o volume quinzenal total estimado.\n"
@@ -2772,37 +2773,21 @@ elif pagina_ativa == "Compras & Suprimentos":
     
     st.info(
         "**Apoio à Decisão e Soberania Técnica:** "
-        "Os quantitativos calculados abaixo representam **sugestões de preparo e dimensionamento antecipado de insumos** gerados pelos modelos preditivos da pesquisa com margens de segurança conformal. "
+        "Os quantitativos calculados abaixo representam **sugestões de preparo e dimensionamento antecipado de insumos** gerados pelo modelo da pesquisa com margem de segurança por quantil. "
         "A decisão operacional final de compra, faturamento contratual e preparo pertence integralmente à Nutricionista Responsável Técnica e à Gestora do Restaurante."
     )
     
     with st.expander("Ajuste Fino de Modelo e Margens para Suprimentos (Opcional)", expanded=False):
-        col_sup1, col_sup2 = st.columns(2)
-        with col_sup1:
-            modelo_sup = st.selectbox(
-                "Modelo Preditivo para Compras:",
-                [
-                    "Modelo Matemático Estável (Autônomo / Recomendado)",
-                    "Modelo Híbrido (Combina IA + Média da Nutrição)"
-                ],
-                index=0,
-                key="cfg_mod_sup"
-            )
-        with col_sup2:
-            margem_sup = st.selectbox(
-                "Margem Conformal Protetiva:",
-                [
-                    "Conformal P85 (+18 ref / 84,9% Proteção) - Padrão da Pesquisa",
-                    "Conformal P90 (+29 ref / 89,8% Proteção)",
-                    "Conformal P75 (+10 ref / 74,6% Proteção)",
-                    "IA Pura (Sem Margem Aditiva)"
-                ],
-                index=0,
-                key="cfg_mar_sup"
-            )
+        st.caption("Modelo das compras: ExtraTrees congelado em 31/08/2026, sem quantitativo institucional.")
+        margem_sup = st.selectbox(
+            "Margem Protetiva:",
+            list(MARGENS_INFO.keys()),
+            index=0,
+            key="cfg_mar_sup"
+        )
 
-    cenario_sup = "Cenário 4 = Cenário 3 + Quantitativo Institucional" if "Híbrido" in modelo_sup else "Cenário 3 = Cenário 2 + Clima"
-    modelo_nome_exec = "Modelo Híbrido (IA + Nutricionista)" if "Híbrido" in modelo_sup else "Modelo Matemático Estável (Ridge)"
+    cenario_sup = CENARIO_PADRAO
+    modelo_nome_exec = MODELO_IA
 
     df_t2, df_feat_t2 = executar_pipeline_previsao(
         horizonte_alvo="Pos_Semana_t2",
@@ -2834,7 +2819,7 @@ elif pagina_ativa == "Compras & Suprimentos":
             st.metric("Calendário Escolar", f"{dias_letivos_t2_count} dias com atendimento", delta=f"{dias_fechados_t2_count} feriado/fechado" if dias_fechados_t2_count > 0 else "Semana 100% Letiva")
         with c_tot4:
             margem_med_t2 = int(df_letivos_t2["margem_aplicada"].mean()) if not df_letivos_t2.empty else 0
-            st.metric("Margem Protetiva Embutida", f"+{margem_med_t2} ref/dia", delta="Proteção Conformal")
+            st.metric("Margem Protetiva Embutida", f"+{margem_med_t2} ref/dia", delta="Margem por quantil")
             
         st.markdown("---")
         st.markdown("#### Grade Quinzenal de Compras e Sugestão de Preparo")
@@ -2882,7 +2867,7 @@ elif pagina_ativa == "Cadastrar Dados":
     renderizar_painel_explicativo(
         objetivo_rotina=(
             "**Registrar a quantidade real de refeições servidas e atualizar o cardápio planejado.** "
-            "É essa rotina rápida de 1 minuto que mantém os modelos de inteligência artificial sempre calibrados com a realidade da escola."
+            "É essa rotina rápida de 1 minuto que mantém o histórico recente usado nas previsões sempre atualizado."
         ),
         como_foi_feito_ciencia=(
             "**Alimentação Contínua da Base Histórica (Camada Medallion):** "
@@ -2891,7 +2876,7 @@ elif pagina_ativa == "Cadastrar Dados":
         como_usar_passos=(
             "1. **Diariamente após as 14h:** Digite o número de refeições servidas naquele dia.\n"
             "2. **Na sexta-feira:** Cadastre os pratos previstos para a próxima semana para que as previsões fiquem precisas.\n"
-            "3. **Proteção por Senha:** Para demonstrar a rotina da nutricionista, digite a senha operacional ('nutri2026')."
+            "3. **Proteção por Senha:** O lançamento de dados exige a senha operacional da equipe."
         )
     )
     
@@ -2909,7 +2894,7 @@ elif pagina_ativa == "Cadastrar Dados":
         Para proteger os registros operacionais da instituição pública de ensino contra alterações acidentais, 
         o lançamento de dados é reservado aos profissionais autorizados.
         
-        * **Deseja testar o formulário operacional de cadastro?** Desbloqueie com a senha de demonstração (`nutri2026`) no formulário abaixo.
+        * **Faz parte da equipe autorizada?** Desbloqueie com a senha operacional no formulário abaixo.
         * **É membro da Banca Examinadora ou Visitante?** Você pode consultar qualquer data cadastrada no histórico abaixo (modo leitura).
         """)
         
@@ -2926,13 +2911,13 @@ elif pagina_ativa == "Cadastrar Dados":
                     btn_desbloquear = st.form_submit_button("Desbloquear Edição", use_container_width=True)
                     
                 if btn_desbloquear:
-                    if perfil_rapido == "Nutricionista / Gestora" and (senha_rapida in [SENHA_NUTRI, "nutri2026", "gestao2026"]):
+                    if perfil_rapido == "Nutricionista / Gestora" and senha_confere(senha_rapida, SENHA_NUTRI):
                         st.session_state["autenticado"] = True
                         st.session_state["usuario_nome"] = "Nutricionista Responsável / Gestora"
                         st.session_state["usuario_perfil"] = "operador"
                         st.success("Acesso liberado com sucesso!")
                         st.rerun()
-                    elif perfil_rapido == "Pesquisador (Admin)" and (senha_rapida in [SENHA_ADMIN, "admin2026"]):
+                    elif perfil_rapido == "Pesquisador (Admin)" and senha_confere(senha_rapida, SENHA_ADMIN):
                         st.session_state["autenticado"] = True
                         st.session_state["usuario_nome"] = "Michel Silva de Souza (Admin)"
                         st.session_state["usuario_perfil"] = "admin"
@@ -3288,7 +3273,7 @@ elif pagina_ativa == "Guia Prático":
     tab_pop, tab_dissertacao, tab_auditoria = st.tabs([
         "📋 Procedimento Operacional Padrão (POP)",
         "📊 Evidências da Dissertação (2026)",
-        "🛡️ Auditoria Anti-Vazamento (Zero Data Leakage)"
+        "🛡️ Auditoria de Vazamento"
     ])
     
     with tab_pop:
@@ -3321,7 +3306,7 @@ elif pagina_ativa == "Guia Prático":
         
     with tab_dissertacao:
         st.markdown("#### 📊 Evidências Empíricas da Dissertação de Mestrado (DSR)")
-        st.markdown("**Síntese Geral: Período Retrospectivo (Fev-Ago/2026, N=121) vs. Prospectivo Cego (Set-Out/2026, N=28)**")
+        st.markdown("**Síntese Geral: Período Retrospectivo (Fev-Ago/2026) vs. Prospectivo (Set-Out/2026, modelo congelado em 31/08/2026)**")
         
         caminho_tab10 = os.path.join(ROOT_DIR, "resultados", "tabelas_dissertacao", "tabela_10_sintese_comparativa_retrospectivo_vs_prospectivo.csv")
         if os.path.exists(caminho_tab10):
@@ -3339,36 +3324,43 @@ elif pagina_ativa == "Guia Prático":
                 st.image(p_fig27, caption="Figura 27: Balanço Acumulado de Sobras e Faltas no Bimestre Prospectivo")
 
         st.markdown("---")
-        st.markdown("##### 🌊 Resiliência às Enchentes de Setembro de 2026 (Semana de Crise no Alto Tietê)")
+        st.markdown("##### 🌊 Enchentes de Setembro de 2026")
         col_en1, col_en2 = st.columns([1.2, 0.8])
         with col_en1:
-            st.markdown("""
-            Durante a semana de inundações na linha da CPTM e nas vias de acesso ao campus em Suzano, o consumo despencou para entre 14 e 118 refeições:
-            - **Nutricionista Humano:** Insistiu na meta institucional padrão (190 a 235 ref), sofrendo erro de **MAE = 136,60 refeições** (WAPE de 188,67%) e gerando **683 refeições desperdiçadas** em apenas 5 dias úteis (R$ 9.562,00 em descarte).
-            - **IA Campeã Congelada em 31/08:** Detectou os alertas meteorológicos de tempestade e reduziu as previsões, atingindo **MAE = 106,04 ref** (WAPE de 146,46%) — **errando 30,56 refeições a menos que o especialista humano**.
-            """)
+            caminho_tab07 = os.path.join(ROOT_DIR, "resultados", "tabelas_dissertacao", "tabela_07_desempenho_prospectivo_set_out.csv")
+            if os.path.exists(caminho_tab07):
+                df_tab07 = pd.read_csv(caminho_tab07, sep=";")
+                df_enc = df_tab07[df_tab07["Recorte"].str.startswith("Dias de enchente")].set_index("Configuracao")
+                e_nutri = df_enc.loc["Nutricionista Institucional"]
+                e_ia = df_enc.loc["ExtraTrees Congelado em 31/08"]
+                st.markdown(f"""
+                Nos 5 dias de alagamento, nenhum método antecipou o evento:
+                - **Nutricionista:** MAE de {str(e_nutri['MAE']).replace('.', ',')} refeições, com {int(e_nutri['Sobra_Total_ref'])} refeições de sobra.
+                - **ExtraTrees congelado em 31/08:** MAE de {str(e_ia['MAE']).replace('.', ',')} refeições, com {int(e_ia['Sobra_Total_ref'])} refeições de sobra.
+                - **Diferença:** {f"{e_nutri['MAE'] - e_ia['MAE']:.2f}".replace('.', ',')} refeições por dia, com previsões ainda muito acima do consumo real.
+                """)
         with col_en2:
             p_fig25 = os.path.join(ROOT_DIR, "resultados", "figuras", "dissertacao", "figura_25_confronto_diario_setembro_enchentes_ia_vs_nutri.png")
             if os.path.exists(p_fig25):
-                st.image(p_fig25, caption="Figura 25: Resiliência Climática nas Enchentes")
+                st.image(p_fig25, caption="Figura 25: Dias sem Evento Registrado vs. Dias de Enchente")
 
     with tab_auditoria:
-        st.markdown("#### 🛡️ Auditoria Formal de Não-Vazamento Temporal (Zero Data Leakage)")
-        st.markdown("Verificação de integridade matemática e ausência de viés retrospectivo para a banca examinadora.")
+        st.markdown("#### 🛡️ Auditoria de Vazamento Temporal")
+        st.markdown("Testes automatizados da avaliação da pesquisa: treino, seleção de dias e atributos.")
         
         caminho_relatorio = os.path.join(ROOT_DIR, "resultados", "auditoria", "relatorio_teste_vazamento_modelos.json")
         if os.path.exists(caminho_relatorio):
             with open(caminho_relatorio, "r", encoding="utf-8") as f_rel:
                 rel_json = json.load(f_rel)
                 
-            st.success(f"✅ **STATUS GERAL DA BASE:** {rel_json.get('status_geral', 'APROVADO - ZERO DATA LEAKAGE')}")
+            st.success(f"✅ **STATUS GERAL DA BASE:** {rel_json.get('status_geral', 'Não executado')}")
             st.caption(f"Última auditoria executada em: {rel_json.get('data_auditoria', '01/11/2026')}")
             
             for teste in rel_json.get("testes", []):
                 with st.container(border=True):
                     st.markdown(f"**{teste.get('teste')}**")
                     if teste.get("sucesso"):
-                        st.markdown("🟢 **Resultado:** APROVADO COM ZERO FALHAS")
+                        st.markdown("🟢 **Resultado:** APROVADO NO TESTE")
                     else:
                         st.markdown("🔴 **Resultado:** REPROVADO")
                     if "detalhe" in teste:
@@ -3382,7 +3374,7 @@ elif pagina_ativa == "Guia Prático":
                 try:
                     from src.core.test_zero_leakage_models import executar_auditoria_completa_vazamento
                     rel_novo = executar_auditoria_completa_vazamento()
-                    st.success("Bateria de testes finalizada com 100% de conformidade! Zero Data Leakage comprovado.")
+                    st.success(f"Bateria de testes finalizada: {rel_novo['status_geral']}.")
                     st.rerun()
                 except Exception as e_aud:
                     st.error(f"Erro ao executar auditoria: {e_aud}")

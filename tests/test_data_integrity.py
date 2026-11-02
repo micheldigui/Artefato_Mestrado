@@ -36,7 +36,11 @@ def test_dissertacao_artifacts_exist():
         "tabela_07_desempenho_prospectivo_set_out.csv",
         "tabela_08_resiliencia_climatica_setembro_enchentes.csv",
         "tabela_10_sintese_comparativa_retrospectivo_vs_prospectivo.csv",
-        "tabela_fronteira_modelo_hibrido_retrospectivo.csv"
+        "tabela_fronteira_modelo_hibrido_retrospectivo.csv",
+        "tabela_08b_previsoes_diarias_enchentes.csv",
+        "tabela_09_margens_empiricas_quantis.csv",
+        "tabela_11_cenario_3_clima_congelado.csv",
+        "tabela_12_comparacao_bootstrap_semanal.csv"
     ]
     for tab in tabelas_esperadas:
         p = pasta_tabelas / tab
@@ -61,3 +65,14 @@ def test_dissertacao_artifacts_exist():
         p = pasta_figuras / fig
         assert p.exists(), f"Figura esperada {fig} não encontrada!"
         assert p.stat().st_size > 1000, f"Figura {fig} parece corrompida (tamanho muito pequeno)!"
+
+
+def test_sintese_usa_todos_os_dias_e_recorte_declarado():
+    sintese = pd.read_csv(RESULTADOS / "tabelas_dissertacao" / "tabela_10_sintese_comparativa_retrospectivo_vs_prospectivo.csv", sep=";")
+    assert sintese["N_Dias"].tolist() == [123, 33, 28, 5]
+
+
+def test_previsoes_congeladas_incluem_dias_com_evento_registrado():
+    congelado = pd.read_parquet(RESULTADOS / "modelos" / "predicoes_congelado_set_out.parquet")
+    assert len(congelado) == 33
+    assert int(congelado["evento_registrado"].sum()) == 5

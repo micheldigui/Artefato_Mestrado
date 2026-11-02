@@ -1,4 +1,4 @@
-"""Camada Gold: Engenharia de atributos orientada pelo marco temporal da sexta-feira (Zero Data Leakage)."""
+"""Camada Gold: Engenharia de atributos orientada pelo marco temporal da sexta-feira."""
 import numpy as np
 import pandas as pd
 from pathlib import Path
@@ -156,11 +156,11 @@ def preparar_alvos(fato: pd.DataFrame) -> pd.DataFrame:
     return alvos.merge(util[colunas_util], on="data")
 
 
-def montar_janela_temporal(alvos: pd.DataFrame, servidos: pd.DataFrame, deslocamento: int) -> pd.DataFrame:
+def montar_janela_temporal(alvos: pd.DataFrame, servidos: pd.DataFrame, deslocamento: int, ultima_emissao=ULTIMA_EMISSAO) -> pd.DataFrame:
     """Constrói atributos vinculados a cada sexta-feira de emissão sem usar o futuro."""
     alvos = alvos.copy()
     alvos["origem"] = origem_da_janela(alvos["data"], deslocamento)
-    alvos = alvos[alvos["origem"] <= ULTIMA_EMISSAO]
+    alvos = alvos[alvos["origem"] <= ultima_emissao]
     linhas = []
     
     for origem, grupo in alvos.groupby("origem"):
@@ -285,6 +285,21 @@ def construir_gold(fato: pd.DataFrame) -> Dict[str, pd.DataFrame]:
     servidos, candidatos = detectar_dias_atipicos(fato)
     dias = classificar_dias(servidos, candidatos)
     return {nome: construir_janela_horizonte(fato, servidos, dias, nome) for nome in ("t1", "t2")}
+
+
+def construir_emissao(fato: pd.DataFrame, origem: pd.Timestamp, nome: str) -> pd.DataFrame:
+    """Calcula os atributos de uma única emissão para uso operacional, inclusive depois da última emissão da pesquisa.
+
+    Dias com registro de atípico ficam fora de todo o histórico usado nos lags e nos efeitos.
+    """
+    deslocamento = HORIZONTES[nome]["deslocamento_dias"]
+    servidos, _ = detectar_dias_atipicos(fato)
+    servidos = servidos[servidos["status_consumo"].ne("atipico")]
+    alvos = preparar_alvos(fato)
+    alvos = alvos[origem_da_janela(alvos["data"], deslocamento) == origem]
+    if alvos.empty:
+        return alvos
+    return adicionar_atributos_finais(montar_janela_temporal(alvos, servidos, deslocamento, ultima_emissao=origem))
 
 
 DICIONARIO_ATRIBUTOS = [

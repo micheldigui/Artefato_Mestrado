@@ -1,4 +1,4 @@
-"""Torneio de Modelos Preditivos em Validação Walk-Forward Estrita (Zero Data Leakage).
+"""Torneio de Modelos Preditivos em Validação Walk-Forward.
 
 Implementa a taxonomia completa de métodos de Machine Learning e Ensembles:
   1. Baselines Estatísticos: Nível Recente (10d) e Mesmo Dia da Semana.
@@ -398,7 +398,8 @@ def avaliar_um_algoritmo(
         warnings.simplefilter("ignore")
         
         for origem in origens_2026:
-            alvo_semana = gold[(gold["origem"] == origem) & gold["consumo"].notna() & gold["usar_no_treino"]]
+            # O teste nunca usa usar_no_treino: essa coluna depende do consumo do próprio dia-alvo.
+            alvo_semana = gold[(gold["origem"] == origem) & gold["consumo"].notna()]
             if alvo_semana.empty:
                 continue
                 
@@ -483,7 +484,7 @@ def executar_torneio_walk_forward() -> Tuple[pd.DataFrame, pd.DataFrame]:
             
             # --- 1. Avaliar Baselines Estatísticos ---
             for nome_base, col_base in [("Baseline_Nivel_Recente_10d", "nivel_10d"), ("Baseline_Mesmo_Dia_Semana", "nivel_mesmo_dia")]:
-                df_teste = gold_2026[gold_2026["consumo"].notna() & gold_2026["usar_no_treino"]].copy()
+                df_teste = gold_2026[gold_2026["consumo"].notna()].copy()
                 pred_base = arredondar_refeicoes(df_teste[col_base].fillna(df_teste["nivel_base"]).values)
                 
                 m = calcular_metricas_operacionais(df_teste["consumo"].values, pred_base)

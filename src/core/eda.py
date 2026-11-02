@@ -43,16 +43,25 @@ def carregar_dados_eda() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     return treino, periodo_discente, periodo_nutri
 
 
-def avaliar_metodos_humanos(periodo_discente: pd.DataFrame, periodo_nutri: pd.DataFrame) -> pd.DataFrame:
+def carregar_dias_dos_metodos() -> Tuple[pd.DataFrame, pd.DataFrame]:
+    """Seleciona todos os dias com consumo. O erro dos métodos não pode depender do resultado do dia."""
+    gold = pd.read_parquet(GOLD / "gold_t1.parquet")
+    servidos = gold[gold["consumo"].notna()]
+    dias_disc = servidos[(servidos["ano"] <= 2025) & servidos["reserva_discente"].notna()].copy()
+    dias_nutri = servidos[(servidos["ano"] == 2026) & servidos["plano_nutricionista"].notna()].copy()
+    return dias_disc, dias_nutri
+
+
+def avaliar_metodos_humanos() -> pd.DataFrame:
     """Compara a acurácia e balanço sobra/falta dos dois métodos humanos (sem viés, focado em métricas)."""
+    df_disc, df_nutri = carregar_dias_dos_metodos()
+
     # 1. Reservas Discentes (2023-2025)
-    df_disc = periodo_discente[periodo_discente["reserva_discente"].notna()].copy()
     erro_disc = df_disc["reserva_discente"] - df_disc["consumo"]
     sobra_disc = np.maximum(0, erro_disc)
     falta_disc = np.maximum(0, -erro_disc)
     
     # 2. Plano da Nutricionista (2026)
-    df_nutri = periodo_nutri[periodo_nutri["plano_nutricionista"].notna()].copy()
     erro_nutri = df_nutri["plano_nutricionista"] - df_nutri["consumo"]
     sobra_nutri = np.maximum(0, erro_nutri)
     falta_nutri = np.maximum(0, -erro_nutri)
@@ -151,22 +160,23 @@ def gerar_suite_12_figuras_dissertacao(treino: pd.DataFrame, periodo_discente: p
     # FIGURA 01: Confronto dos Métodos Humanos (Dispersão x Consumo Real: Reservas Discentes vs Nutricionista)
     # -------------------------------------------------------------------------------------------------
     fig, axes = plt.subplots(1, 2, figsize=(14, 5.5))
-    v_disc = periodo_discente[periodo_discente["reserva_discente"].notna()]
+    v_disc, v_nutri = carregar_dias_dos_metodos()
+    erro_d = v_disc["reserva_discente"] - v_disc["consumo"]
+    erro_n = v_nutri["plano_nutricionista"] - v_nutri["consumo"]
     max_d = max(v_disc["reserva_discente"].max(), v_disc["consumo"].max()) + 20
-    axes[0].scatter(v_disc["reserva_discente"], v_disc["consumo"], color="#2b5c8f", alpha=0.5, s=35, label="Dias Letivos (N=436)")
+    axes[0].scatter(v_disc["reserva_discente"], v_disc["consumo"], color="#2b5c8f", alpha=0.5, s=35, label=f"Dias com Consumo (N={len(v_disc)})")
     axes[0].plot([0, max_d], [0, max_d], color="#e74c3c", linestyle="--", linewidth=1.5, label="Balanço Ideal (y = x)")
-    axes[0].set_title(f"Reservas Discentes vs. Consumo Real (2023-2025)\nr = {v_disc['reserva_discente'].corr(v_disc['consumo']):.3f} | MAE = 27.0 | WAPE = 19.9%", fontweight="bold")
+    axes[0].set_title(f"Reservas Discentes vs. Consumo Real (2023-2025)\nr = {v_disc['reserva_discente'].corr(v_disc['consumo']):.3f} | MAE = {erro_d.abs().mean():.1f} | WAPE = {erro_d.abs().sum() / v_disc['consumo'].sum() * 100:.1f}%", fontweight="bold")
     axes[0].set_xlabel("Refeições Reservadas pelos Estudantes")
     axes[0].set_ylabel("Refeições Efetivamente Servidas")
     axes[0].set_xlim(0, max_d)
     axes[0].set_ylim(0, max_d)
     axes[0].legend(loc="upper left")
     
-    v_nutri = periodo_nutri[periodo_nutri["plano_nutricionista"].notna()]
     max_n = max(v_nutri["plano_nutricionista"].max(), v_nutri["consumo"].max()) + 20
-    axes[1].scatter(v_nutri["plano_nutricionista"], v_nutri["consumo"], color="#27ae60", alpha=0.6, s=40, label="Dias Letivos (N=149)")
+    axes[1].scatter(v_nutri["plano_nutricionista"], v_nutri["consumo"], color="#27ae60", alpha=0.6, s=40, label=f"Dias com Consumo (N={len(v_nutri)})")
     axes[1].plot([0, max_n], [0, max_n], color="#e74c3c", linestyle="--", linewidth=1.5, label="Balanço Ideal (y = x)")
-    axes[1].set_title(f"Plano da Nutricionista vs. Consumo Real (2026)\nr = {v_nutri['plano_nutricionista'].corr(v_nutri['consumo']):.3f} | MAE = 23.7 | WAPE = 13.6%", fontweight="bold")
+    axes[1].set_title(f"Plano da Nutricionista vs. Consumo Real (2026)\nr = {v_nutri['plano_nutricionista'].corr(v_nutri['consumo']):.3f} | MAE = {erro_n.abs().mean():.1f} | WAPE = {erro_n.abs().sum() / v_nutri['consumo'].sum() * 100:.1f}%", fontweight="bold")
     axes[1].set_xlabel("Quantitativo Planejado pela Nutricionista")
     axes[1].set_ylabel("Refeições Efetivamente Servidas")
     axes[1].set_xlim(0, max_n)
@@ -185,7 +195,7 @@ def gerar_suite_12_figuras_dissertacao(treino: pd.DataFrame, periodo_discente: p
     sobra_nutri = np.maximum(0, v_nutri["plano_nutricionista"] - v_nutri["consumo"]).sum()
     falta_nutri = np.maximum(0, v_nutri["consumo"] - v_nutri["plano_nutricionista"]).sum()
     
-    metodos = ["Reservas Discentes\n(2023-2025, 436 dias)", "Plano Nutricionista\n(2026, 149 dias)"]
+    metodos = [f"Reservas Discentes\n(2023-2025, {len(v_disc)} dias)", f"Plano Nutricionista\n(2026, {len(v_nutri)} dias)"]
     x = np.arange(len(metodos))
     w = 0.35
     
@@ -447,7 +457,7 @@ def executar_eda_completa() -> dict:
     """Executa a rotina completa de análise exploratória, salva tabelas e gera a suíte de 12 figuras."""
     treino, periodo_discente, periodo_nutri = carregar_dados_eda()
     
-    df_humanos = avaliar_metodos_humanos(periodo_discente, periodo_nutri)
+    df_humanos = avaliar_metodos_humanos()
     df_ranking = calcular_ranking_atributos(treino, periodo_discente, periodo_nutri)
     
     gerar_suite_12_figuras_dissertacao(treino, periodo_discente, periodo_nutri)
