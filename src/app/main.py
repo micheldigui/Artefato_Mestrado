@@ -1063,11 +1063,30 @@ if pagina_ativa == "Dashboard":
         st.markdown("##### 🎛️ Filtros Interativos do Histórico")
         col_f1, col_f2 = st.columns([1.5, 2.5])
         with col_f1:
+            opcoes_filtro_periodo = [
+                "Todo o Histórico (2023–2026)",
+                "Reservas Discentes (2023–2025)",
+                "Regime Nutricionista (2026 — Ano Corrente)",
+                "Ano Letivo 2025",
+                "Ano Letivo 2024",
+                "Ano Letivo 2023",
+                "Personalizado (Marcar Anos Específicos...)"
+            ]
             filtro_ano = st.selectbox(
-                "Filtrar por Período / Ano Letivo:",
-                ["Todo o Histórico (2023–2026)", "2026 (Ano Corrente)", "2025", "2024", "2023"],
-                index=0
+                "Filtrar por Período / Regime / Ano Letivo:",
+                opcoes_filtro_periodo,
+                index=0,
+                help="Selecione 'Reservas Discentes (2023–2025)' para focar a EDA na fase em que o preparo dependia do agendamento voluntário dos estudantes."
             )
+            
+            anos_custom = None
+            if filtro_ano == "Personalizado (Marcar Anos Específicos...)":
+                anos_custom = st.multiselect(
+                    "Marque os anos que deseja incluir:",
+                    options=[2023, 2024, 2025, 2026],
+                    default=[2023, 2024, 2025],
+                    format_func=lambda a: f"{a} (Reservas)" if a < 2026 else f"{a} (Nutricionista)"
+                )
         with col_f2:
             opcoes_dias = ["segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira"]
             filtro_dias_sem = st.multiselect(
@@ -1085,14 +1104,32 @@ if pagina_ativa == "Dashboard":
             
     # Aplicação dos filtros dinâmicos com normalização robusta
     df_dash = df_validos_geral.copy()
-    if filtro_ano == "2026 (Ano Corrente)":
+    if filtro_ano.startswith("Todo"):
+        rotulo_filtro = "Todo o Histórico (2023–2026)"
+    elif "Reservas Discentes" in filtro_ano:
+        df_dash = df_dash[df_dash["ano"].isin([2023, 2024, 2025])]
+        rotulo_filtro = "Reservas Discentes (2023–2025)"
+    elif "2026" in filtro_ano:
         df_dash = df_dash[df_dash["ano"] == 2026]
-    elif filtro_ano == "2025":
+        rotulo_filtro = "Regime Nutricionista (2026)"
+    elif "2025" in filtro_ano:
         df_dash = df_dash[df_dash["ano"] == 2025]
-    elif filtro_ano == "2024":
+        rotulo_filtro = "Ano Letivo 2025"
+    elif "2024" in filtro_ano:
         df_dash = df_dash[df_dash["ano"] == 2024]
-    elif filtro_ano == "2023":
+        rotulo_filtro = "Ano Letivo 2024"
+    elif "2023" in filtro_ano:
         df_dash = df_dash[df_dash["ano"] == 2023]
+        rotulo_filtro = "Ano Letivo 2023"
+    elif filtro_ano == "Personalizado (Marcar Anos Específicos...)":
+        if anos_custom:
+            df_dash = df_dash[df_dash["ano"].isin(anos_custom)]
+            rotulo_filtro = f"Anos: {', '.join(str(a) for a in sorted(anos_custom))}"
+        else:
+            df_dash = df_dash.iloc[0:0]
+            rotulo_filtro = "Nenhum ano selecionado"
+    else:
+        rotulo_filtro = "Todo o Histórico (2023–2026)"
         
     def normalizar_dia_chave(d):
         txt = str(d).lower().strip()
@@ -1243,7 +1280,7 @@ if pagina_ativa == "Dashboard":
                 st.markdown("##### Potencial de Falta (Déficit) vs. Sobra por Ano")
                 st.caption("Comparativo anual consolidado de refeições faltantes vs. excedentes acumuladas (Dissertação Fig. 02).")
                 
-                df_bal_base = df_validos_geral.copy()
+                df_bal_base = df_dash.copy() if len(df_dash) > 0 else df_validos_geral.copy()
                 c_nut = df_bal_base["planejado_nutri"] if "planejado_nutri" in df_bal_base.columns else pd.Series(index=df_bal_base.index, dtype=float)
                 c_res = df_bal_base["reservas"] if "reservas" in df_bal_base.columns else pd.Series(index=df_bal_base.index, dtype=float)
                 df_bal_base["referencia_bal"] = c_nut.combine_first(c_res)
@@ -1443,7 +1480,7 @@ if pagina_ativa == "Dashboard":
                 st.markdown("##### Curva Semanal Comparativa por Ano (2023–2026)")
                 st.caption("Comprova que a queda de sexta-feira é estrutural e se repetiu em todos os 4 anos analisados.")
                 
-                df_sem_ano = df_validos_geral.copy()
+                df_sem_ano = df_dash.copy() if len(df_dash["ano"].unique()) > 1 else df_validos_geral.copy()
                 df_sem_ano["dia_nome"] = df_sem_ano["dia_da_semana"].apply(map_dia_pt_local)
                 df_sem_ano = df_sem_ano[df_sem_ano["dia_nome"].notna()]
                 df_s_agg = df_sem_ano.groupby(["ano", "dia_nome"])["consumo"].mean().reset_index()
@@ -1515,7 +1552,7 @@ if pagina_ativa == "Dashboard":
             col_p1, col_p2 = st.columns([1, 1.3])
             with col_p1:
                 st.markdown("##### Média de Alunos por Tipo de Carne")
-                st.caption(f"Comparativo visual de consumo médio no período: **{filtro_ano}**.")
+                st.caption(f"Comparativo visual de consumo médio no período: **{rotulo_filtro}**.")
                 
                 fig_p = px.bar(
                     df_p_agg,
@@ -1538,7 +1575,7 @@ if pagina_ativa == "Dashboard":
                 st.plotly_chart(fig_p, use_container_width=True)
                 
             with col_p2:
-                st.markdown(f"##### Ranking e Recomendações por Prato — {filtro_ano}")
+                st.markdown(f"##### Ranking e Recomendações por Prato — {rotulo_filtro}")
                 st.caption(f"Estatísticas dinâmicas calculadas em tempo real sobre {len(df_p)} datas analisadas no filtro.")
                 
                 html_rows = []
