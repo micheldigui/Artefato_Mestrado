@@ -1,5 +1,5 @@
 {
-  "data_auditoria": "24/11/2026 18:00:23",
+  "data_auditoria": "24/11/2026 20:25:35",
   "status_geral": "APROVADO NOS TESTES EXECUTADOS",
   "alcance": "Cobre consumo, rótulos e oráculos na avaliação da pesquisa. Não cobre o aplicativo.",
   "testes": [

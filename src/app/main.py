@@ -445,6 +445,10 @@ div[data-testid="stMetric"] {{
     border-radius: var(--radius-md) !important;
     padding: 12px 16px !important;
     box-shadow: var(--shadow-sm) !important;
+    min-height: 100px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
 }}
 div[data-testid="stMetricLabel"],
 div[data-testid="stMetricLabel"] p {{
@@ -2790,7 +2794,7 @@ elif pagina_ativa == "Simulador de Cenários":
             
             c_bt1, c_bt2, c_bt3 = st.columns(3)
             with c_bt1:
-                st.metric("Consumo Real dos Alunos", f"{real_val} ref")
+                st.metric("Consumo Real dos Alunos", f"{real_val} ref", delta="Auditado na catraca", delta_color="off")
             with c_bt2:
                 st.metric("Recomendação do Modelo", f"{pred_val} ref", delta=f"Erro absoluto: {erro_abs} ref")
             with c_bt3:
