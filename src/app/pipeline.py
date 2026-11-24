@@ -186,15 +186,70 @@ def margem_do_modelo(tipo_margem, politica, margem_custom, horizonte, cenario, a
     return margem_do_algoritmo(horizonte, cenario, algoritmo, int(quantil[1:]) / 100)
 
 
-def avaliar_viabilidade_margem(is_letivo, precip, dia_sem_num, prot, prato, margem_politica=21.0):
+def avaliar_viabilidade_margem(is_letivo, precip, dia_sem_num, prot, prato, margem_politica=21.0, horizonte="t1"):
     """
     Avalia a viabilidade contextual de aplicar margem de segurança no dia específico.
-    Considera precipitação/tempestade, sazonalidade do dia da semana (sexta) e atratividade da proteína.
+    Considera o horizonte operacional ('t1' para preparo ou 't2' para compras),
+    precipitação/tempestade, sazonalidade do dia da semana (sexta) e atratividade da proteína.
     Retorna: (status_rotulo, motivo_detalhado, margem_sugerida, cor_hex)
     """
     if not is_letivo:
         return "⛔ Não se aplica (Feriado/Fechado)", "Refeitório fechado", 0.0, "#94a3b8"
     
+    p_lower = str(prot).lower()
+    prato_lower = str(prato).lower()
+
+    # --- HORIZONTE T+2: COMPRAS & SUPRIMENTOS (10 a 14 dias) ---
+    if horizonte == "t2":
+        # Margem de compras padrão da pesquisa: P85 = +36 ref, P75 = +21 ref
+        m_cheia = float(margem_politica) if margem_politica > 0 else 36.0
+        m_econ = 21.0 if m_cheia >= 21.0 else m_cheia
+
+        # 1. Sexta-feira no T+2: histórico persistente de evasão semanal
+        if dia_sem_num == 4:
+            return (
+                f"🟡 Moderada (+{int(m_econ)} ref)",
+                "Sexta-feira (evasão semanal típica): margem econômica recomendada para evitar sobra de compras no fim de semana",
+                m_econ,
+                "#f59e0b"
+            )
+
+        # 2. Proteína de menor apelo histórico (peixe, ovo)
+        if "peixe" in p_lower or "ovo" in p_lower:
+            return (
+                f"🟡 Moderada (+{int(m_econ)} ref)",
+                "Proteína com menor atratividade histórica: compra moderada para evitar acúmulo de carnes no estoque",
+                m_econ,
+                "#f59e0b"
+            )
+
+        # 3. Chuva forte prevista com 14 dias de antecedência (sinal de atenção cautelosa)
+        if precip >= 15.0:
+            return (
+                f"🟡 Cautelosa (+{int(m_econ)} ref)",
+                f"Previsão preliminar de chuva forte ({precip:.1f} mm a 14 dias): margem econômica recomendada para mitigar risco de sobras",
+                m_econ,
+                "#f59e0b"
+            )
+
+        # 4. Alta atratividade (bovina, feijoada)
+        if "bovina" in p_lower or "feijoada" in prato_lower:
+            return (
+                f"🟢 Recomendada (+{int(m_cheia)} ref)",
+                "Cardápio com alta atratividade (proteína bovina): margem cheia para garantir suprimento e evitar ruptura de estoque",
+                m_cheia,
+                "#10b981"
+            )
+
+        # 5. Regular letivo T+2
+        return (
+            f"🟢 Recomendada (+{int(m_cheia)} ref)",
+            "Planejamento quinzenal regular: margem de compras recomendada para cobertura de pedidos",
+            m_cheia,
+            "#10b981"
+        )
+
+    # --- HORIZONTE T+1: PREPARO DIÁRIO (3 a 7 dias) ---
     # 1. Alerta de Tempestade severa (>= 15 mm): alto risco de evasão
     if precip >= 15.0:
         return (
@@ -225,7 +280,6 @@ def avaliar_viabilidade_margem(is_letivo, precip, dia_sem_num, prot, prato, marg
         )
     
     # 4. Proteína de menor apelo (peixe, ovo)
-    p_lower = str(prot).lower()
     if "peixe" in p_lower or "ovo" in p_lower:
         m_mod = 14.0 if margem_politica >= 14.0 else float(margem_politica)
         return (
@@ -236,7 +290,7 @@ def avaliar_viabilidade_margem(is_letivo, precip, dia_sem_num, prot, prato, marg
         )
     
     # 5. Proteína bovina / feijoada com tempo seco (alta atratividade)
-    if "bovina" in p_lower or "feijoada" in str(prato).lower():
+    if "bovina" in p_lower or "feijoada" in prato_lower:
         m_rec = float(margem_politica) if margem_politica > 0 else 21.0
         return (
             f"🟢 Recomendada (+{int(m_rec)} ref)",
@@ -492,13 +546,15 @@ def executar_pipeline_previsao(
             margem_valor = calcular_margem(tipo_margem, politica, margem_adicional)
 
         # Avaliação de viabilidade contextual da margem de segurança
+        margem_padrao_ref = _MARGENS["P85"]["t2"] if hz == "t2" else (_MARGENS["P85"]["hibrido"] if eh_hibrido else 21.0)
         status_viab, motivo_viab, margem_sug_dia, cor_viab = avaliar_viabilidade_margem(
             is_letivo=is_letivo,
             precip=precip,
             dia_sem_num=dia_sem_num,
             prot=prot,
             prato=prato,
-            margem_politica=margem_valor if margem_valor > 0 else (_MARGENS["P85"]["hibrido"] if eh_hibrido else 21.0)
+            margem_politica=margem_valor if margem_valor > 0 else margem_padrao_ref,
+            horizonte=hz
         )
         margem_sugerida_dia = int(round(margem_sug_dia))
         sugestao_com_margem = max(0, int(round(pred_base + margem_sugerida_dia))) if is_letivo else 0
@@ -506,9 +562,9 @@ def executar_pipeline_previsao(
         faixa_max = max(0, int(round(pred_base + margem_sugerida_dia + 8))) if (is_letivo and margem_sugerida_dia > 0) else (max(0, int(round(pred_base + 8))) if is_letivo else 0)
         faixa_str = f"{faixa_min} a {faixa_max} ref" if is_letivo else "0 ref (Fechado)"
 
-        # Regra de Resiliência Climática: se tempestade extrema (>= 15 mm), desativa margem aditiva
-        if precip >= 15.0:
-            margem_valor = 0.0 # Modo de Contenção de Desperdício
+        # Regra de Resiliência Climática: no T+1 (preparo), se tempestade extrema (>= 15 mm), desativa margem aditiva
+        if hz == "t1" and precip >= 15.0:
+            margem_valor = 0.0 # Modo de Contenção de Desperdício no Preparo
 
         pred_final = max(0, pred_base + margem_valor)
         
@@ -738,7 +794,7 @@ def simular_previsao_data(
                 pred_base, politica = pred_ia, ("t2" if hz == "t2" else "ia")
             margem_val = margem_do_modelo(tipo_margem, politica, margem_customizada, hz, cenario_ia, algoritmo)
 
-    if chuva_utilizada >= 15.0:
+    if hz == "t1" and chuva_utilizada >= 15.0:
         margem_val = 0.0
 
     pred_final = max(0, pred_base + margem_val)
@@ -806,6 +862,23 @@ def simular_previsao_data(
 
     erro_abs = abs(pred_final - consumo_real) if consumo_real is not None else None
 
+    # Avaliação de viabilidade contextual da margem de segurança no simulador
+    margem_padrao_sim = _MARGENS["P85"]["t2"] if hz == "t2" else (_MARGENS["P85"]["hibrido"] if eh_hibrido else 21.0)
+    status_viab, motivo_viab, margem_sug_dia, cor_viab = avaliar_viabilidade_margem(
+        is_letivo=is_letivo_sim,
+        precip=chuva_utilizada,
+        dia_sem_num=dia_sem,
+        prot=prot_utilizada,
+        prato=prato_utilizado,
+        margem_politica=margem_val if margem_val > 0 else margem_padrao_sim,
+        horizonte=hz
+    )
+    margem_sugerida_dia = int(round(margem_sug_dia))
+    sugestao_com_margem = max(0, int(round(pred_base + margem_sugerida_dia))) if is_letivo_sim else 0
+    faixa_min = max(0, int(round(pred_base - 8))) if is_letivo_sim else 0
+    faixa_max = max(0, int(round(pred_base + margem_sugerida_dia + 8))) if (is_letivo_sim and margem_sugerida_dia > 0) else (max(0, int(round(pred_base + 8))) if is_letivo_sim else 0)
+    faixa_str = f"{faixa_min} a {faixa_max} ref" if is_letivo_sim else "0 ref (Fechado)"
+
     return {
         "dt_alvo": dt_alvo,
         "data_str": data_formatada,
@@ -842,6 +915,14 @@ def simular_previsao_data(
         "pred_base": round(pred_base, 1),
         "margem_val": round(margem_val, 1),
         "pred_final": int(round(pred_final)),
+        "status_viabilidade_margem": status_viab,
+        "motivo_viabilidade_margem": motivo_viab,
+        "cor_viabilidade_margem": cor_viab,
+        "margem_sugerida_dia": margem_sugerida_dia,
+        "sugestao_com_margem": sugestao_com_margem,
+        "faixa_min": faixa_min,
+        "faixa_max": faixa_max,
+        "faixa_str": faixa_str,
         "mm5": round(media_5d, 1),
         "lag5": round(lag5, 1),
         "lag10": round(lag10, 1),

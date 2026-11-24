@@ -1016,6 +1016,37 @@ if sel_top and sel_top != st.session_state["pagina_ativa"]:
 
 pagina_ativa = st.session_state["pagina_ativa"]
 
+def obter_ico_prot(prot_str):
+    p_low = str(prot_str).lower()
+    if "bovin" in p_low or "carne" in p_low:
+        return "🥩"
+    if "frang" in p_low or "ave" in p_low or "galinh" in p_low:
+        return "🍗"
+    if "suin" in p_low or "suín" in p_low or "porco" in p_low or "lombo" in p_low:
+        return "🥓"
+    if "peixe" in p_low or "pescad" in p_low:
+        return "🐟"
+    if "ovo" in p_low:
+        return "🍳"
+    return "🍲"
+
+
+def formatar_prep_nome(prep_str):
+    p = str(prep_str).replace("_", " ").title()
+    mapa = {
+        "Ao Molho Ou Refogado": "Ao Molho / Refogado",
+        "Massa Ou Montado": "Massa / Montado",
+        "Sem Cardapio": "Padrão"
+    }
+    return mapa.get(p, p)
+
+
+def formatar_alertas(al_txt):
+    if not al_txt or pd.isna(al_txt):
+        return "Operação regular"
+    return str(al_txt).replace("\ufe0f", "").strip()
+
+
 def renderizar_painel_explicativo(objetivo_rotina, como_foi_feito_ciencia, como_usar_passos):
     """
     Renderiza um painel retrátil claro, acolhedor e visual para explicar a tela
@@ -2249,29 +2280,6 @@ elif pagina_ativa == "Previsões":
         dias_letivos_count = len(df_letivos_t1)
         dias_nao_letivos_count = len(df_t1) - dias_letivos_count
 
-        def obter_ico_prot(prot_str):
-            p_low = str(prot_str).lower()
-            if "bovin" in p_low or "carne" in p_low:
-                return "🥩"
-            if "frang" in p_low or "ave" in p_low or "galinh" in p_low:
-                return "🍗"
-            if "suin" in p_low or "suín" in p_low or "porco" in p_low or "lombo" in p_low:
-                return "🥓"
-            if "peixe" in p_low or "pescad" in p_low:
-                return "🐟"
-            if "ovo" in p_low:
-                return "🍳"
-            return "🍲"
-
-        def formatar_prep_nome(prep_str):
-            p = str(prep_str).replace("_", " ").title()
-            mapa = {
-                "Ao Molho Ou Refogado": "Ao Molho / Refogado",
-                "Massa Ou Montado": "Massa / Montado",
-                "Sem Cardapio": "Padrão"
-            }
-            return mapa.get(p, p)
-
         # INDICADORES DA SEMANA T+1
         c_kpi1, c_kpi2, c_kpi3, c_kpi4 = st.columns(4)
         total_base_t1 = int(df_t1["pred_base_combinada"].sum())
@@ -2706,7 +2714,7 @@ elif pagina_ativa == "Simulador de Cenários":
     # Indicadores Principais
     c_kpi1, c_kpi2, c_kpi3, c_kpi4 = st.columns(4)
     with c_kpi1:
-        rotulo_prod = "Ordem de Preparo (t+1)" if obj_chave == "consumo" else "Volume para Compras (t+2)"
+        rotulo_prod = "Previsão Mais Provável (Base)"
         if not resultado_sim["is_dia_letivo"]:
             st.metric(
                 rotulo_prod,
@@ -2715,28 +2723,59 @@ elif pagina_ativa == "Simulador de Cenários":
                 delta_color="off"
             )
         else:
-            delta_ref = resultado_sim["pred_final"] - 180
+            p_base_val = int(round(resultado_sim["pred_base"]))
             st.metric(
                 rotulo_prod,
-                f"{resultado_sim['pred_final']} refeições",
-                delta=f"{delta_ref:+d} vs média regular (180)"
+                f"{p_base_val} refeições",
+                delta=f"Modelo: {modelo_sel.split('(')[0].strip()}"
             )
     with c_kpi2:
         if not resultado_sim["is_dia_letivo"]:
             st.metric("Previsão Bruta (IA)", "0 ref", delta="Não aplicável (Fechado)", delta_color="off")
         else:
-            st.metric("Previsão Bruta (IA)", f"{resultado_sim['pred_ia']} ref", delta="Sem margem extra")
+            delta_ia = f"Nutrição: {int(round(resultado_sim['nutri_utilizado']))} ref" if (resultado_sim.get("nutri_utilizado") is not None and obj_chave == "consumo") else "Sem meta externa"
+            st.metric(
+                "Previsão Bruta da IA",
+                f"{int(round(resultado_sim['pred_ia']))} ref",
+                delta=delta_ia
+            )
     with c_kpi3:
         if not resultado_sim["is_dia_letivo"]:
-            st.metric("Margem de Segurança", "+0 ref", delta="Não aplicável (Fechado)", delta_color="off")
+            st.metric("Viabilidade da Margem", "Não aplicável", delta="Fechado", delta_color="off")
         else:
-            st.metric("Margem de Segurança", f"+{int(round(resultado_sim['margem_val']))} ref", delta=f"Política: {margem_sel.split('(')[0].strip()}")
+            st.metric(
+                "Viabilidade da Margem",
+                resultado_sim.get("status_viabilidade_margem", "🟢 Recomendada"),
+                delta=f"Sugerida: +{resultado_sim.get('margem_sugerida_dia', 0)} ref"
+            )
     with c_kpi4:
-        st.metric(
-            "Histórico até a Sexta de Corte",
-            f"{resultado_sim['dias_historico_utilizados']} dias",
-            delta=f"MM 5d: {resultado_sim['mm5']} ref"
-        )
+        if not resultado_sim["is_dia_letivo"]:
+            st.metric("Faixa Sugerida", "0 ref", delta="Fechado", delta_color="off")
+        else:
+            st.metric(
+                "Faixa Sugerida (Mín - Máx)",
+                resultado_sim.get("faixa_str", "—"),
+                delta=f"Sugestão c/ margem: {resultado_sim.get('sugestao_com_margem', resultado_sim['pred_final'])} ref"
+            )
+
+    if resultado_sim["is_dia_letivo"]:
+        ico_sim_prot = obter_ico_prot(resultado_sim.get("prot_utilizada", ""))
+        prep_sim_nome = formatar_prep_nome(resultado_sim.get("prep_utilizado", ""))
+        st.markdown(f"""
+        <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-left: 4px solid {resultado_sim.get('cor_viabilidade_margem', '#10b981')}; padding: 10px 14px; border-radius: var(--radius-sm); margin: 12px 0;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                <div>
+                    <b>Gastronomia Simulada:</b> {ico_sim_prot} {str(resultado_sim.get('prot_utilizada', '')).capitalize()} ({prep_sim_nome}) — <i>{resultado_sim.get('prato_utilizado', '')}</i>
+                </div>
+                <div>
+                    <b>Clima:</b> 🌦️ {resultado_sim.get('temp_utilizada', 25.0):.1f}°C | {resultado_sim.get('chuva_utilizada', 0.0):.1f} mm chuva
+                </div>
+            </div>
+            <div style="font-size: 12.5px; color: var(--text-muted); margin-top: 5px;">
+                <b>Parecer da Margem:</b> {resultado_sim.get('motivo_viabilidade_margem', '')}
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
     # Backtest / Confronto se a data já ocorreu
     if resultado_sim["consumo_real"] is not None:
@@ -2857,22 +2896,22 @@ f"**Modelo de Longo Prazo ({NOME_COMPRAS}, escolhido em Fev-Ago/2026):** "
             horizonte_rotulo="Semana t+2"
         )
 
-        total_semana_t2 = int(df_t2["recomendacao_final"].sum())
+        total_base_t2 = int(df_t2["ia_pura"].sum())
         df_letivos_t2 = df_t2[df_t2["is_dia_letivo"] == True]
-        media_dia_t2 = int(df_letivos_t2["recomendacao_final"].mean()) if not df_letivos_t2.empty else 0
+        media_base_t2 = int(df_letivos_t2["ia_pura"].mean()) if not df_letivos_t2.empty else 0
         dias_letivos_t2_count = len(df_letivos_t2)
         dias_fechados_t2_count = len(df_t2) - dias_letivos_t2_count
         
         c_tot1, c_tot2, c_tot3, c_tot4 = st.columns(4)
         with c_tot1:
-            st.metric("Volume Total Sugerido (Semana t+2)", f"{total_semana_t2:,} refeições".replace(",", "."))
+            st.metric("Volume Quinzenal (Base Pura)", f"{total_base_t2:,} refeições".replace(",", "."), delta=f"+{int(df_t2['margem_aplicada'].sum())} ref de margem total")
         with c_tot2:
-            st.metric("Média Diária em Dias Letivos", f"{media_dia_t2} ref/dia", delta=f"{dias_letivos_t2_count} dias operacionais")
+            st.metric("Média Diária Prevista (Base)", f"{media_base_t2} ref/dia", delta=f"{dias_letivos_t2_count} dias operacionais")
         with c_tot3:
             st.metric("Calendário Escolar", f"{dias_letivos_t2_count} dias com atendimento", delta=f"{dias_fechados_t2_count} feriado/fechado" if dias_fechados_t2_count > 0 else "Semana 100% Letiva")
         with c_tot4:
             margem_med_t2 = int(df_letivos_t2["margem_aplicada"].mean()) if not df_letivos_t2.empty else 0
-            st.metric("Margem Protetiva Embutida", f"+{margem_med_t2} ref/dia", delta="Margem por quantil")
+            st.metric("Margem Protetiva Embutida", f"+{margem_med_t2} ref/dia", delta="Margem por quantil ExtraTrees")
             
         st.markdown("---")
         st.markdown("#### Grade Quinzenal de Compras e Sugestão de Preparo")
@@ -2884,20 +2923,26 @@ f"**Modelo de Longo Prazo ({NOME_COMPRAS}, escolhido em Fev-Ago/2026):** "
             lambda r: f"⛔ {r['evento_tipo']}" if not r.get("is_dia_letivo", True) else "✅ Letivo Regular",
             axis=1
         )
-        df_exibir_t2["Cardápio / Prato Previsto"] = df_t2.apply(
-            lambda r: r["prato_principal"] if not r.get("is_dia_letivo", True) else f"{r['prato_principal']} ({r['proteina_tipo']})",
+        df_exibir_t2["Cardápio Previsto"] = df_t2["prato_principal"]
+        df_exibir_t2["Proteína & Preparo"] = df_t2.apply(
+            lambda r: f"{obter_ico_prot(r.get('proteina_tipo', ''))} {r.get('proteina_tipo', '')} ({formatar_prep_nome(r.get('preparo_tipo', ''))})" if r.get("is_dia_letivo", True) and r.get("proteina_tipo", "—") != "—" else "—",
             axis=1
         )
-        df_exibir_t2["Origem do Cardápio"] = df_t2["status_cardapio"]
-        df_exibir_t2["Fonte Meteorológica"] = df_t2["status_clima"]
-        df_exibir_t2["Previsão Base (IA)"] = df_t2["ia_pura"].astype(int).astype(str) + " ref"
-        df_exibir_t2["Margem de Segurança"] = "+" + df_t2["margem_aplicada"].astype(int).astype(str) + " ref"
-        df_exibir_t2["Sugestão de Preparo (Final)"] = df_t2.apply(
-            lambda r: "0 refeições (Fechado)" if not r.get("is_dia_letivo", True) else f"{int(r['recomendacao_final'])} refeições",
+        df_exibir_t2["Previsão Base (IA Pura)"] = df_t2["ia_pura"].astype(int).astype(str) + " ref"
+        df_exibir_t2["Viabilidade da Margem"] = df_t2["status_viabilidade_margem"]
+        
+        def formatar_sugestao_t2(row):
+            if not row.get("is_dia_letivo", True):
+                return "0 refeições (Fechado)"
+            return f"{int(row.get('sugestao_com_margem', row.get('recomendacao_final', 0)))} refeições"
+            
+        df_exibir_t2["Sugestão de Compra c/ Margem"] = df_t2.apply(formatar_sugestao_t2, axis=1)
+        df_exibir_t2["Faixa Sugerida (Mín - Máx)"] = df_t2["faixa_str"]
+        df_exibir_t2["Previsão do Tempo"] = df_t2.apply(
+            lambda r: f"{r['temp_max_c']:.1f}°C / {r['chuva_mm']:.1f} mm",
             axis=1
         )
-        df_exibir_t2["Previsão do Tempo"] = df_t2["temp_max_c"].map(lambda x: f"{x:.1f}°C") + " / " + df_t2["chuva_mm"].map(lambda x: f"{x:.1f} mm chuva")
-        df_exibir_t2["Alertas e Condições"] = df_t2["alertas"]
+        df_exibir_t2["Alertas e Condições"] = df_t2["alertas"].apply(formatar_alertas)
         
         st.dataframe(df_exibir_t2, use_container_width=True, hide_index=True)
         
