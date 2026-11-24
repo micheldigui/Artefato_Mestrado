@@ -38,8 +38,8 @@
     },
     {
       "arquivo": "cardapio/cardapio_2026.csv",
-      "bytes": 19674,
-      "sha256": "875e6ae4304de7b1fc2294d593fcae5f00d35466841df23b3dcb297b060997f0"
+      "bytes": 21895,
+      "sha256": "2f9a720b44f572d44085d33ddc40433c170ebfeecac2b7f5955cd8a0002aa990"
     },
     {
       "arquivo": "clima/clima_historico.csv",
@@ -53,8 +53,8 @@
     },
     {
       "arquivo": "consumo/consumo_outubro_novembro_2026.csv",
-      "bytes": 2115,
-      "sha256": "aa8342dadc5b768432fc8ee7c37518d6ca12cd5890eb8c0f5b9af43de8d7eecb"
+      "bytes": 2309,
+      "sha256": "431506deb4deb877e7827d77f93b3b9e9d8ffacfea6d7875802798693a9d01d8"
     },
     {
       "arquivo": "consumo/consumo_por_data_2023.csv",
@@ -98,8 +98,8 @@
     },
     {
       "arquivo": "reservas/reservas_2026.csv",
-      "bytes": 10855,
-      "sha256": "b38f9cf5a34aca4aa5242252e1e0aab3d79c43d31f7bde1ef80124509306e63f"
+      "bytes": 11060,
+      "sha256": "26e5c2bcb7676fadd833bb2414e99eb8c692ea0bae99d13c994d525f644db776"
     }
   ]
 }

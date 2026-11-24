@@ -230,7 +230,9 @@ def obter_proximos_dias_uteis(origem_dt=None, num_dias=10, dias_frente=None):
         else:
             origem_dt = datetime.utcnow() - timedelta(hours=3)
 
-    if not isinstance(origem_dt, datetime):
+    if isinstance(origem_dt, str):
+        origem_dt = pd.to_datetime(origem_dt)
+    elif not isinstance(origem_dt, datetime):
         origem_dt = datetime.combine(origem_dt, datetime.min.time())
 
     # Determinar a Segunda-feira da Semana t+1
@@ -267,7 +269,9 @@ def executar_pipeline_previsao(
     cenario_escolhido=CENARIO_PADRAO,
     modelo_escolhido=MODELO_HIBRIDO,
     tipo_margem=MARGEM_PADRAO,
-    margem_adicional=0
+    margem_adicional=0,
+    origem_dt=None,
+    salvar=False
 ):
     """
     Executa a inferência para os horizontes futuros com flexibilidade de seleção de dados
@@ -284,7 +288,7 @@ def executar_pipeline_previsao(
     df_clima_futuro = obter_previsao_clima_futura(dias_frente=16)
     mediana_temp = 24.5
 
-    datas_uteis = obter_proximos_dias_uteis(num_dias=10)
+    datas_uteis = obter_proximos_dias_uteis(origem_dt=origem_dt, num_dias=10)
     atributos = {
         "t1": atributos_da_emissao(df_fato, origem_da_data(datas_uteis[0], "t1"), "t1"),
         "t2": atributos_da_emissao(df_fato, origem_da_data(datas_uteis[5], "t2"), "t2")
@@ -495,7 +499,8 @@ def executar_pipeline_previsao(
         
     df_resultado = pd.DataFrame(linhas_pred)
     df_features = pd.DataFrame(linhas_features)
-    salvar_predicoes_geradas(df_resultado)
+    if salvar:
+        salvar_predicoes_geradas(df_resultado)
     return df_resultado, df_features
 
 def carregar_gold_passado(horizonte, origem):

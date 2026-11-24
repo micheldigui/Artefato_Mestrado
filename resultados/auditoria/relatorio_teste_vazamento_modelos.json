@@ -1,5 +1,5 @@
 {
-  "data_auditoria": "02/11/2026 00:40:10",
+  "data_auditoria": "24/11/2026 17:23:03",
   "status_geral": "APROVADO NOS TESTES EXECUTADOS",
   "alcance": "Cobre consumo, rótulos e oráculos na avaliação da pesquisa. Não cobre o aplicativo.",
   "testes": [
@@ -12,21 +12,17 @@
     {
       "teste": "2. Fronteira Temporal nas Chamadas Reais de Treino (max(treino) < origem)",
       "sucesso": true,
-      "semanas_auditadas": 72,
-      "emissoes_sem_dias_avaliaveis": [
-        "t1 2026-10-30",
-        "t2 2026-10-23",
-        "t2 2026-10-30"
-      ],
+      "semanas_auditadas": 75,
+      "emissoes_sem_dias_avaliaveis": [],
       "erros": [],
-      "detalhe": "72 emissões com fit registrado; 3 sem dias avaliáveis: ['t1 2026-10-30', 't2 2026-10-23', 't2 2026-10-30']."
+      "detalhe": "75 emissões com fit registrado; 0 sem dias avaliáveis: []."
     },
     {
       "teste": "3. Seleção do Teste sem Colunas Derivadas do Resultado",
       "sucesso": true,
-      "dias_avaliados": 156,
+      "dias_avaliados": 160,
       "erros": [],
-      "detalhe": "156 de 156 dias com consumo foram avaliados."
+      "detalhe": "160 de 160 dias com consumo foram avaliados."
     },
     {
       "teste": "4. Invariância Adversarial com Consumo, Alvo e Rótulos Futuros Corrompidos",
