@@ -2249,12 +2249,37 @@ elif pagina_ativa == "Previsões":
         dias_letivos_count = len(df_letivos_t1)
         dias_nao_letivos_count = len(df_t1) - dias_letivos_count
 
+        def obter_ico_prot(prot_str):
+            p_low = str(prot_str).lower()
+            if "bovin" in p_low or "carne" in p_low:
+                return "🥩"
+            if "frang" in p_low or "ave" in p_low or "galinh" in p_low:
+                return "🍗"
+            if "suin" in p_low or "suín" in p_low or "porco" in p_low or "lombo" in p_low:
+                return "🥓"
+            if "peixe" in p_low or "pescad" in p_low:
+                return "🐟"
+            if "ovo" in p_low:
+                return "🍳"
+            return "🍲"
+
+        def formatar_prep_nome(prep_str):
+            p = str(prep_str).replace("_", " ").title()
+            mapa = {
+                "Ao Molho Ou Refogado": "Ao Molho / Refogado",
+                "Massa Ou Montado": "Massa / Montado",
+                "Sem Cardapio": "Padrão"
+            }
+            return mapa.get(p, p)
+
         # INDICADORES DA SEMANA T+1
         c_kpi1, c_kpi2, c_kpi3, c_kpi4 = st.columns(4)
+        total_base_t1 = int(df_t1["pred_base_combinada"].sum())
+        media_base_t1 = int(df_letivos_t1["pred_base_combinada"].mean()) if not df_letivos_t1.empty else 0
         with c_kpi1:
-            st.metric("Volume Semanal de Preparo", f"{total_semana_t1:,} refeições".replace(",", "."))
+            st.metric("Volume Semanal (Base Pura)", f"{total_base_t1:,} refeições".replace(",", "."), delta=f"+{int(df_t1['margem_aplicada'].sum())} ref de margem total")
         with c_kpi2:
-            st.metric("Média Diária em Dias Letivos", f"{media_dia_t1} ref/dia", delta=f"{dias_letivos_count} dias operacionais")
+            st.metric("Média Diária Prevista (Base)", f"{media_base_t1} ref/dia", delta=f"{dias_letivos_count} dias operacionais")
         with c_kpi3:
             st.metric("Calendário Escolar", f"{dias_letivos_count} dias com atendimento", delta=f"{dias_nao_letivos_count} feriado/fechado" if dias_nao_letivos_count > 0 else "Semana 100% Letiva")
         with c_kpi4:
@@ -2277,6 +2302,12 @@ elif pagina_ativa == "Previsões":
             status_card = str(row_dia.get("status_cardapio", ""))
             temp_dia = float(row_dia.get("temp_max_c", 25.0))
             chuva_dia = float(row_dia.get("chuva_mm", 0.0))
+            prot_tipo = str(row_dia.get("proteina_tipo", "—"))
+            prep_tipo = formatar_prep_nome(row_dia.get("preparo_tipo", "—"))
+            ico_prot = obter_ico_prot(prot_tipo)
+            d_faixa = str(row_dia.get("faixa_str", f"{max(0, d_base-8)} a {d_ordem+8} ref"))
+            status_viab = str(row_dia.get("status_viabilidade_margem", "🟢 Recomendada (+21 ref)"))
+            sug_marg = int(row_dia.get("sugestao_com_margem", d_ordem))
             
             if not is_let:
                 card_html = (
@@ -2295,14 +2326,32 @@ elif pagina_ativa == "Previsões":
                     else f'<span style="font-size: 10.5px; background: #fef3c7; color: #92400e; padding: 2px 6px; border-radius: 4px; font-weight: 600;">⚠️ Cardápio Estimado (Neutro)</span>'
                 )
                 clima_tag = f'<div style="font-size: 11px; color: #64748b; margin-top: 4px;">🌦️ {temp_dia:.1f}°C | {chuva_dia:.1f} mm</div>'
+                
+                # Tag de proteína e técnica de preparo
+                tag_gastronomia = (
+                    f'<div style="font-size: 11px; font-weight: 600; color: #334155; margin: 3px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{prot_tipo} • {prep_tipo}">'
+                    f'{ico_prot} {prot_tipo} • {prep_tipo}</div>'
+                    if prot_tipo != "—" else ''
+                )
+                
+                # Pílula de viabilidade da margem para o dia
+                if "Desaconselhada" in status_viab or "🔴" in status_viab:
+                    viab_pill = f'<div style="font-size: 10.5px; font-weight: 700; margin-top: 5px; padding: 2px 6px; border-radius: 4px; background: #fee2e2; color: #991b1b; border: 1px solid #fecaca;">{status_viab}</div>'
+                elif "Moderada" in status_viab or "🟡" in status_viab:
+                    viab_pill = f'<div style="font-size: 10.5px; font-weight: 700; margin-top: 5px; padding: 2px 6px; border-radius: 4px; background: #fef3c7; color: #92400e; border: 1px solid #fde68a;">{status_viab}</div>'
+                else:
+                    viab_pill = f'<div style="font-size: 10.5px; font-weight: 700; margin-top: 5px; padding: 2px 6px; border-radius: 4px; background: #dcfce7; color: #166534; border: 1px solid #bbf7d0;">{status_viab}</div>'
+                
                 card_html = (
                     f'<div class="day-prod-card">'
                     f'<div class="day-prod-date">{d_nome} ({d_data[:5]})</div>'
                     f'<div class="day-prod-dish">{d_prato}</div>'
-                    f'<div class="day-prod-number">{d_ordem}</div>'
-                    f'<div class="day-prod-badge">Sugestão de Preparo</div>'
-                    f'<div class="day-prod-sub">Base: {d_base} | Margem: +{d_marg}</div>'
-                    f'<div style="margin-top: 8px;">{card_menu_pill}</div>'
+                    f'{tag_gastronomia}'
+                    f'<div class="day-prod-number">{d_base}</div>'
+                    f'<div class="day-prod-badge" style="background: #e0f2fe; color: #0369a1; border-color: #bae6fd;">Previsão Base (Híbrido)</div>'
+                    f'{viab_pill}'
+                    f'<div class="day-prod-sub" style="font-size: 11px; margin-top: 5px; color: #334155;">Faixa Sugerida: <b style="color: #0f766e;">{d_faixa}</b></div>'
+                    f'<div style="margin-top: 6px;">{card_menu_pill}</div>'
                     f'{clima_tag}'
                     f'</div>'
                 )
@@ -2321,8 +2370,10 @@ elif pagina_ativa == "Previsões":
             axis=1
         )
         df_exibir["Prato Principal"] = df_t1["prato_principal"]
-        df_exibir["Status Cardápio"] = df_t1["status_cardapio"]
-        df_exibir["Fonte Clima"] = df_t1["status_clima"]
+        df_exibir["Proteína & Preparo"] = df_t1.apply(
+            lambda r: f"{obter_ico_prot(r.get('proteina_tipo', ''))} {r.get('proteina_tipo', '')} ({formatar_prep_nome(r.get('preparo_tipo', ''))})" if r.get("is_dia_letivo", True) and r.get("proteina_tipo", "—") != "—" else "—",
+            axis=1
+        )
         df_exibir["Previsão do Tempo"] = df_t1.apply(
             lambda r: f"{r['temp_max_c']:.1f}°C / {r['chuva_mm']:.1f} mm",
             axis=1
@@ -2337,33 +2388,24 @@ elif pagina_ativa == "Previsões":
             return f"{int(round(val))} ref"
             
         df_exibir["Quantitativo Nutrição (Meta)"] = df_t1.apply(formatar_nutri_t1, axis=1)
-        df_exibir["Previsão Base (IA)"] = df_t1["ia_pura"].astype(int).astype(str) + " ref"
-        df_exibir["Margem Segura"] = "+" + df_t1["margem_aplicada"].astype(int).astype(str) + " ref"
+        df_exibir["Previsão IA (ExtraTrees)"] = df_t1["ia_pura"].astype(int).astype(str) + " ref"
+        df_exibir["Previsão Híbrida (Base Pura)"] = df_t1["pred_base_combinada"].astype(int).astype(str) + " ref"
+        df_exibir["Viabilidade da Margem"] = df_t1["status_viabilidade_margem"]
         
         def formatar_sugestao_t1(row):
             if not row.get("is_dia_letivo", True):
                 return "0 refeições (Fechado)"
-            return f"{int(row.get('recomendacao_final', 0))} refeições"
+            return f"{int(row.get('sugestao_com_margem', row.get('recomendacao_final', 0)))} refeições"
             
-        df_exibir["Sugestão de Preparo (Final)"] = df_t1.apply(formatar_sugestao_t1, axis=1)
-        
-        def formatar_faixa_t1(row):
-            if not row.get("is_dia_letivo", True):
-                return "0 ref (Fechado)"
-            base = row.get("pred_base_combinada", 0)
-            rec = row.get("recomendacao_final", 0)
-            f_min = max(0, int(base - 8))
-            f_max = int(rec + 8)
-            return f"{f_min} a {f_max} ref"
-            
-        df_exibir["Faixa Sugerida (Mín - Máx)"] = df_t1.apply(formatar_faixa_t1, axis=1)
+        df_exibir["Sugestão com Margem"] = df_t1.apply(formatar_sugestao_t1, axis=1)
+        df_exibir["Faixa Sugerida (Mín - Máx)"] = df_t1["faixa_str"]
         
         def formatar_alertas(al_txt):
             if not al_txt or pd.isna(al_txt):
                 return "Operação regular"
             return str(al_txt).replace("\ufe0f", "").strip()
             
-        df_exibir["Alertas"] = df_t1["alertas"].apply(formatar_alertas)
+        df_exibir["Alertas Operacionais"] = df_t1["alertas"].apply(formatar_alertas)
         st.dataframe(df_exibir, use_container_width=True, hide_index=True)
 
         # Exportação CSV

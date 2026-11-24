@@ -186,6 +186,75 @@ def margem_do_modelo(tipo_margem, politica, margem_custom, horizonte, cenario, a
     return margem_do_algoritmo(horizonte, cenario, algoritmo, int(quantil[1:]) / 100)
 
 
+def avaliar_viabilidade_margem(is_letivo, precip, dia_sem_num, prot, prato, margem_politica=21.0):
+    """
+    Avalia a viabilidade contextual de aplicar margem de segurança no dia específico.
+    Considera precipitação/tempestade, sazonalidade do dia da semana (sexta) e atratividade da proteína.
+    Retorna: (status_rotulo, motivo_detalhado, margem_sugerida, cor_hex)
+    """
+    if not is_letivo:
+        return "⛔ Não se aplica (Feriado/Fechado)", "Refeitório fechado", 0.0, "#94a3b8"
+    
+    # 1. Alerta de Tempestade severa (>= 15 mm): alto risco de evasão
+    if precip >= 15.0:
+        return (
+            "🔴 Desaconselhada (+0 ref)",
+            f"Alerta de tempestade ({precip:.1f} mm): alto risco de evasão, priorizar contenção de sobras",
+            0.0,
+            "#ef4444"
+        )
+    
+    # 2. Chuva moderada (8 a 15 mm): evasão moderada, margem econômica recomendada
+    if precip >= 8.0:
+        m_mod = 14.0 if margem_politica >= 14.0 else float(margem_politica)
+        return (
+            f"🟡 Moderada (+{int(m_mod)} ref)",
+            f"Chuva moderada prevista ({precip:.1f} mm): risco moderado de evasão, sugerida margem econômica P75",
+            m_mod,
+            "#f59e0b"
+        )
+    
+    # 3. Sexta-feira: evasão histórica semanal (~20% menor que segundas)
+    if dia_sem_num == 4:
+        m_mod = 14.0 if margem_politica >= 14.0 else float(margem_politica)
+        return (
+            f"🟡 Moderada (+{int(m_mod)} ref)",
+            "Sexta-feira com evasão histórica típica: comparecimento historicamente inferior à média semanal",
+            m_mod,
+            "#f59e0b"
+        )
+    
+    # 4. Proteína de menor apelo (peixe, ovo)
+    p_lower = str(prot).lower()
+    if "peixe" in p_lower or "ovo" in p_lower:
+        m_mod = 14.0 if margem_politica >= 14.0 else float(margem_politica)
+        return (
+            f"🟡 Moderada (+{int(m_mod)} ref)",
+            "Proteína com menor atratividade histórica: sugerida margem econômica moderada",
+            m_mod,
+            "#f59e0b"
+        )
+    
+    # 5. Proteína bovina / feijoada com tempo seco (alta atratividade)
+    if "bovina" in p_lower or "feijoada" in str(prato).lower():
+        m_rec = float(margem_politica) if margem_politica > 0 else 21.0
+        return (
+            f"🟢 Recomendada (+{int(m_rec)} ref)",
+            "Cardápio com alta atratividade (proteína bovina): proteção recomendada contra ruptura de atendimento",
+            m_rec,
+            "#10b981"
+        )
+        
+    # 6. Dia letivo regular
+    m_rec = float(margem_politica) if margem_politica > 0 else 21.0
+    return (
+        f"🟢 Recomendada (+{int(m_rec)} ref)",
+        "Operação letiva regular: margem padrão recomendada para cobertura",
+        m_rec,
+        "#10b981"
+    )
+
+
 def cenario_da_ia(cfg, horizonte, eh_hibrido):
     """O híbrido e o T+2 nunca recebem o quantitativo como atributo da IA."""
     return 3 if cfg["numero"] == 4 and (eh_hibrido or horizonte == "t2") else cfg["numero"]
@@ -422,8 +491,23 @@ def executar_pipeline_previsao(
                 pred_base, politica = pred_ia_base, ("t2" if hz == "t2" else "ia")
             margem_valor = calcular_margem(tipo_margem, politica, margem_adicional)
 
+        # Avaliação de viabilidade contextual da margem de segurança
+        status_viab, motivo_viab, margem_sug_dia, cor_viab = avaliar_viabilidade_margem(
+            is_letivo=is_letivo,
+            precip=precip,
+            dia_sem_num=dia_sem_num,
+            prot=prot,
+            prato=prato,
+            margem_politica=margem_valor if margem_valor > 0 else (_MARGENS["P85"]["hibrido"] if eh_hibrido else 21.0)
+        )
+        margem_sugerida_dia = int(round(margem_sug_dia))
+        sugestao_com_margem = max(0, int(round(pred_base + margem_sugerida_dia))) if is_letivo else 0
+        faixa_min = max(0, int(round(pred_base - 8))) if is_letivo else 0
+        faixa_max = max(0, int(round(pred_base + margem_sugerida_dia + 8))) if (is_letivo and margem_sugerida_dia > 0) else (max(0, int(round(pred_base + 8))) if is_letivo else 0)
+        faixa_str = f"{faixa_min} a {faixa_max} ref" if is_letivo else "0 ref (Fechado)"
+
         # Regra de Resiliência Climática: se tempestade extrema (>= 15 mm), desativa margem aditiva
-        if usar_clima and precip >= 15.0:
+        if precip >= 15.0:
             margem_valor = 0.0 # Modo de Contenção de Desperdício
 
         pred_final = max(0, pred_base + margem_valor)
@@ -439,14 +523,16 @@ def executar_pipeline_previsao(
             margem_valor = 0.0
             pred_final = 0.0
             pred_ia_base = 0.0
+            margem_sugerida_dia = 0
+            sugestao_com_margem = 0
+            faixa_min = faixa_max = 0
+            faixa_str = "0 ref (Fechado)"
             alertas.append(f"{evento_rotulo} — Refeitório Fechado (0 refeições)")
         else:
             if dia_sem_num == 4:
                 alertas.append(ALERTA_SEXTA)
-            if usar_clima and precip >= 15.0:
+            if precip >= 15.0:
                 alertas.append(f"Alerta tempestade ({precip:.1f} mm): modo contenção ativado (margem zerada para evitar desperdício)")
-            elif precip >= 15.0:
-                alertas.append(f"Chuva forte prevista ({precip:.1f} mm): avaliar o risco de queda de comparecimento")
             elif precip >= 8.0:
                 alertas.append(f"Chuva prevista ({precip:.1f} mm): risco moderado de evasão")
             if usar_cardapio and cenario_ia >= 2:
@@ -480,6 +566,14 @@ def executar_pipeline_previsao(
             "pred_base_combinada": round(pred_base) if is_letivo else 0,
             "margem_aplicada": round(margem_valor) if is_letivo else 0,
             "recomendacao_final": round(pred_final) if is_letivo else 0,
+            "margem_sugerida_dia": margem_sugerida_dia,
+            "status_viabilidade_margem": status_viab,
+            "motivo_viabilidade_margem": motivo_viab,
+            "cor_viabilidade_margem": cor_viab,
+            "sugestao_com_margem": sugestao_com_margem,
+            "faixa_min": faixa_min,
+            "faixa_max": faixa_max,
+            "faixa_str": faixa_str,
             "alertas": "; ".join(alertas) if alertas else "Operação normal dentro da média"
         })
 
@@ -644,7 +738,7 @@ def simular_previsao_data(
                 pred_base, politica = pred_ia, ("t2" if hz == "t2" else "ia")
             margem_val = margem_do_modelo(tipo_margem, politica, margem_customizada, hz, cenario_ia, algoritmo)
 
-    if usar_clima and chuva_utilizada >= 15.0:
+    if chuva_utilizada >= 15.0:
         margem_val = 0.0
 
     pred_final = max(0, pred_base + margem_val)
