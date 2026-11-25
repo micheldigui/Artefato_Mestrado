@@ -1149,20 +1149,20 @@ def renderizar_painel_transparencia_dados(df_horizonte, titulo_painel="Diagnóst
         bg_clima = "#f1f5f9"
         sub_clima = "Cenário experimental selecionado não utiliza variáveis meteorológicas."
     elif tem_satelite:
-        b_clima = "✅ Satélite Open-Meteo Ativo"
+        b_clima = "✅ Previsão Meteorológica Ativa (Open-Meteo)"
         cor_clima = "#0369a1"
         bg_clima = "#e0f2fe"
-        sub_clima = "Previsão do tempo obtida em tempo real via satélite para o campus."
+        sub_clima = "Previsão do tempo obtida via API Open-Meteo (modelos numéricos) para o campus."
     else:
         b_clima = "ℹ️ Mediana Histórica (Offline)"
         cor_clima = "#475569"
         bg_clima = "#f1f5f9"
-        sub_clima = "API meteorológica indisponível. Artefato utilizando a mediana histórica segura."
+        sub_clima = "API meteorológica indisponível. Artefato utilizando a mediana histórica de contingência."
         alerta_clima = (
-            "ℹ️ **Conexão Meteorológica em Contingência Segura:** "
-            "A API pública Open-Meteo está temporariamente inacessível ou offline. "
-            "O sistema ativou automaticamente a mediana histórica dos últimos anos para o campus (24,0°C e 2,5 mm), "
-            "mantendo a operação preditiva 100% contínua e sem falhas."
+            "ℹ️ **Conexão Meteorológica em Modo Contingência:** "
+            "A API Open-Meteo está temporariamente inacessível. "
+            "O sistema ativou a mediana histórica para o campus (24,0°C e 2,5 mm) como valor de contingência, "
+            "permitindo a continuidade da operação preditiva."
         )
 
     # 3. Calendário Acadêmico
@@ -1420,7 +1420,7 @@ if pagina_ativa == "Dashboard":
     # --------------------------------------------------------------------------
     if "1. Consumo Histórico" in secao_dash:
         with st.container(border=True):
-            st.markdown("#### ⚖️ Regimes Históricos de Gestão vs. Consumo Real dos Alunos")
+            st.markdown("#### ⚖️ Regimes Históricos de Gestão vs. Consumo Registrado")
             st.write(
                 "**Entenda a história do nosso refeitório:** "
                 "Entre 2023 e 2025, a quantidade de comida dependia do preenchimento voluntário de reservas feitas pelos discentes no sistema acadêmico. "
@@ -2085,8 +2085,8 @@ if pagina_ativa == "Dashboard":
                 st.plotly_chart(fig_temp, use_container_width=True)
                 
             with col_c4:
-                st.markdown("##### Matriz de Diagnóstico Meteorológico & Ação")
-                st.caption("Regras de calibração automática aplicadas pelo artefato preditivo.")
+                st.markdown("##### Matriz de Diagnóstico Meteorológico & Diretrizes")
+                st.caption("Diretrizes operacionais consultivas de apoio à decisão (a recomendação central mantém a política calibrada).")
                 
                 d_sec = (df_ch["precipitation_sum"] == 0).sum()
                 m_sec = df_ch[df_ch["precipitation_sum"] == 0]["consumo"].mean()
@@ -2098,10 +2098,10 @@ if pagina_ativa == "Dashboard":
                 m_tem = df_ch[df_ch["precipitation_sum"] > 15]["consumo"].mean()
                 
                 df_matriz_clima = pd.DataFrame([
-                    {"Condição Climática": "Dia Seco (0 mm)", "Datas": f"{d_sec}d", "Média Real": f"{m_sec:.0f} ref" if pd.notna(m_sec) else "-", "Regra do Artefato": "Margem protetiva plena (+12 ref)."},
-                    {"Condição Climática": "Garoa (0.1 a 5 mm)", "Datas": f"{d_gar}d", "Média Real": f"{m_gar:.0f} ref" if pd.notna(m_gar) else "-", "Regra do Artefato": "Pequeno recuo automático (-5 ref)."},
-                    {"Condição Climática": "Chuva Forte (5.1 a 15 mm)", "Datas": f"{d_chu}d", "Média Real": f"{m_chu:.0f} ref" if pd.notna(m_chu) else "-", "Regra do Artefato": "Recuo preventivo (-12 ref)."},
-                    {"Condição Climática": "Tempestade (>15 mm)", "Datas": f"{d_tem}d", "Média Real": f"{m_tem:.0f} ref" if pd.notna(m_tem) else "-", "Regra do Artefato": "Zera margem extra e corta excesso."}
+                    {"Condição Climática": "Dia Seco (0 mm)", "Datas": f"{d_sec}d", "Média Histórica": f"{m_sec:.0f} ref" if pd.notna(m_sec) else "-", "Parecer Contextual": "Margem calibrada recomendada (+21 ref no P85)."},
+                    {"Condição Climática": "Garoa (0.1 a 5 mm)", "Datas": f"{d_gar}d", "Média Histórica": f"{m_gar:.0f} ref" if pd.notna(m_gar) else "-", "Parecer Contextual": "Margem calibrada recomendada (+21 ref no P85)."},
+                    {"Condição Climática": "Chuva Forte (5.1 a 15 mm)", "Datas": f"{d_chu}d", "Média Histórica": f"{m_chu:.0f} ref" if pd.notna(m_chu) else "-", "Parecer Contextual": "Parecer consultivo sugere margem moderada (+14 ref no P75)."},
+                    {"Condição Climática": "Tempestade (>15 mm)", "Datas": f"{d_tem}d", "Média Histórica": f"{m_tem:.0f} ref" if pd.notna(m_tem) else "-", "Parecer Contextual": "Parecer consultivo sugere contenção (+0 ref consultivo)."}
                 ])
                 st.dataframe(df_matriz_clima, use_container_width=True, hide_index=True)
 
@@ -2241,9 +2241,10 @@ elif pagina_ativa == "Previsões":
             "A previsão e a margem aparecem separadas, e a decisão final é da nutricionista e da gestora."
         ),
         como_foi_feito_ciencia=(
-            "**Combinação Inteligente (Modelo Híbrido 50/50 + Margem de Segurança):** "
-            "O sistema junta a experiência prática da nutricionista com modelos preditivos de inteligência artificial e aprendizado de máquina. "
-            "Para reduzir o risco de falta, adiciona uma margem calculada a partir das faltas observadas de fevereiro a agosto de 2026."
+            "**Combinação Inteligente (Modelo Híbrido 50/50 + Margem de Segurança Calibrada):** "
+            f"O sistema combina o quantitativo da gestão com o modelo vencedor de curto prazo ({NOME_PREPARO}, Cenário 2: com cardápio). "
+            "A margem de segurança aditiva oficial da pesquisa (+21 ref no quantil P85) foi calibrada sobre os resíduos empíricos. "
+            "A faixa sugerida utiliza limites operacionais heurísticos assimétricos [máx(0, pred_base - 8), recomendacao_final + 8] para balizar a cozinha, combinando a estimativa central, a margem aplicada e a tolerância de ±8 refeições (não constitui intervalo de confiança probabilístico formal)."
         ),
         como_usar_passos=(
             "1. **Toda sexta-feira:** Veja os cartões abaixo com a 'Ordem de Preparo' para cada dia da semana.\n"
@@ -2278,25 +2279,44 @@ elif pagina_ativa == "Previsões":
             horizonte_rotulo="Semana t+1"
         )
 
-        total_semana_t1 = int(df_t1["recomendacao_final"].sum())
         df_letivos_t1 = df_t1[df_t1["is_dia_letivo"] == True]
-        media_dia_t1 = int(df_letivos_t1["recomendacao_final"].mean()) if not df_letivos_t1.empty else 0
         dias_letivos_count = len(df_letivos_t1)
         dias_nao_letivos_count = len(df_t1) - dias_letivos_count
+        
+        # Dias letivos com previsão efetivamente calculada
+        df_com_prev_t1 = df_letivos_t1[df_letivos_t1["recomendacao_final"].notna() & (df_letivos_t1.get("previsao_disponivel", True) == True)]
+        dias_com_prev_count = len(df_com_prev_t1)
+        dias_sem_prev_count = dias_letivos_count - dias_com_prev_count
+
+        total_base_t1 = int(round(df_com_prev_t1["pred_base_combinada"].sum())) if not df_com_prev_t1.empty else 0
+        media_base_t1 = float(df_com_prev_t1["pred_base_combinada"].mean()) if not df_com_prev_t1.empty else 0.0
+        margem_tot_t1 = int(round(df_com_prev_t1["margem_aplicada"].sum())) if not df_com_prev_t1.empty else 0
+        margem_media_t1 = float(df_com_prev_t1["margem_aplicada"].mean()) if not df_com_prev_t1.empty else 0.0
 
         # INDICADORES DA SEMANA T+1
         c_kpi1, c_kpi2, c_kpi3, c_kpi4 = st.columns(4)
-        total_base_t1 = int(df_t1["pred_base_combinada"].sum())
-        media_base_t1 = int(df_letivos_t1["pred_base_combinada"].mean()) if not df_letivos_t1.empty else 0
         with c_kpi1:
-            st.metric("Volume Semanal (Base Pura)", f"{total_base_t1:,} refeições".replace(",", "."), delta=f"+{int(df_t1['margem_aplicada'].sum())} ref de margem total")
+            if dias_com_prev_count == dias_letivos_count and dias_letivos_count > 0:
+                st.metric("Volume Semanal (Base Pura)", f"{total_base_t1:,} refeições".replace(",", "."), delta=f"+{margem_tot_t1} ref de margem total")
+            elif dias_com_prev_count > 0:
+                st.metric("Volume Parcial (Base Pura)", f"{total_base_t1:,} refeições".replace(",", "."), delta=f"{dias_com_prev_count} de {dias_letivos_count} dias previstos (+{margem_tot_t1} ref)")
+            else:
+                st.metric("Volume Semanal (Base Pura)", "—", delta="Previsão Indisponível", delta_color="off")
         with c_kpi2:
-            st.metric("Média Diária Prevista (Base)", f"{media_base_t1} ref/dia", delta=f"{dias_letivos_count} dias operacionais")
+            if dias_com_prev_count > 0:
+                st.metric("Média Diária Prevista (Base)", f"{media_base_t1:.1f} ref/dia", delta=f"{dias_com_prev_count} dias operacionais calculados")
+            else:
+                st.metric("Média Diária Prevista (Base)", "—", delta="Sem dados calculados", delta_color="off")
         with c_kpi3:
-            st.metric("Calendário Escolar", f"{dias_letivos_count} dias com atendimento", delta=f"{dias_nao_letivos_count} feriado/fechado" if dias_nao_letivos_count > 0 else "Semana 100% Letiva")
+            sub_cal = f"{dias_nao_letivos_count} feriado/fechado" if dias_nao_letivos_count > 0 else "Semana 100% Letiva"
+            if dias_sem_prev_count > 0:
+                sub_cal += f" • {dias_sem_prev_count} sem previsão"
+            st.metric("Calendário Escolar", f"{dias_letivos_count} dias com atendimento", delta=sub_cal)
         with c_kpi4:
-            margem_media = int(df_letivos_t1["margem_aplicada"].mean()) if not df_letivos_t1.empty else 0
-            st.metric("Margem Protetiva Embutida", f"+{margem_media} ref/dia", delta=f"Política: {margem_t1.split('(')[0].strip()}")
+            if dias_com_prev_count > 0:
+                st.metric("Margem Protetiva Embutida", f"+{margem_media_t1:.1f} ref/dia" if margem_media_t1 > 0 else "0 ref/dia", delta=f"Política: {margem_t1.split('(')[0].strip()}")
+            else:
+                st.metric("Margem Protetiva Embutida", "—", delta=f"Política: {margem_t1.split('(')[0].strip()}")
 
         st.markdown("---")
         # CARTOES DIARIOS HORIZONTAIS DA SEMANA (GRADE DA COZINHA)
@@ -2307,19 +2327,16 @@ elif pagina_ativa == "Previsões":
             d_nome = html.escape(str(row_dia["dia_semana"]).upper())
             d_data = html.escape(str(row_dia["data"]))
             d_prato = html.escape(str(row_dia["prato_principal"]))
-            d_ordem = int(row_dia["recomendacao_final"])
-            d_base = int(row_dia["pred_base_combinada"])
-            d_marg = int(row_dia["margem_aplicada"])
             is_let = bool(row_dia.get("is_dia_letivo", True))
+            prev_disp = bool(row_dia.get("previsao_disponivel", True)) and pd.notna(row_dia.get("recomendacao_final"))
             status_card = str(row_dia.get("status_cardapio", ""))
             temp_dia = float(row_dia.get("temp_max_c", 25.0))
             chuva_dia = float(row_dia.get("chuva_mm", 0.0))
             prot_tipo = str(row_dia.get("proteina_tipo", "—"))
             prep_tipo = formatar_prep_nome(row_dia.get("preparo_tipo", "—"))
             ico_prot = obter_ico_prot(prot_tipo)
-            d_faixa = str(row_dia.get("faixa_str", f"{max(0, d_base-8)} a {d_ordem+8} ref"))
             status_viab = str(row_dia.get("status_viabilidade_margem", "🟢 Recomendada (+21 ref)"))
-            sug_marg = int(row_dia.get("sugestao_com_margem", d_ordem))
+            d_faixa = str(row_dia.get("faixa_str", "—"))
             
             if not is_let:
                 card_html = (
@@ -2331,7 +2348,21 @@ elif pagina_ativa == "Previsões":
                     f'<div class="day-prod-sub" style="color: #64748b; margin-top: 4px;">Não Letivo • Refeitório Fechado</div>'
                     f'</div>'
                 )
+            elif not prev_disp:
+                card_html = (
+                    f'<div class="day-prod-card" style="border-top: 4px solid #f59e0b !important; background: #fffbeb;">'
+                    f'<div class="day-prod-date">{d_nome} ({d_data[:5]})</div>'
+                    f'<div class="day-prod-dish" style="color: #92400e; font-weight: 600;">{d_prato}</div>'
+                    f'<div class="day-prod-number" style="color: #b45309;">—</div>'
+                    f'<div class="day-prod-badge" style="background: #fef3c7; color: #92400e; border: 1px solid #fde68a;">Previsão Indisponível</div>'
+                    f'<div class="day-prod-sub" style="color: #b45309; margin-top: 4px;">Histórico Insuficiente (Fora de Escopo)</div>'
+                    f'</div>'
+                )
             else:
+                d_ordem = int(round(float(row_dia["recomendacao_final"])))
+                d_base = int(round(float(row_dia["pred_base_combinada"])))
+                d_marg = int(round(float(row_dia.get("margem_aplicada", 0))))
+                sug_marg = int(round(float(row_dia.get("sugestao_com_margem", d_ordem))))
                 card_menu_pill = (
                     f'<span style="font-size: 10.5px; background: #dcfce7; color: #166534; padding: 2px 6px; border-radius: 4px; font-weight: 600;">✅ Cardápio Oficial</span>'
                     if "Oficial" in status_card
@@ -2400,17 +2431,35 @@ elif pagina_ativa == "Previsões":
             return f"{int(round(val))} ref"
             
         df_exibir["Quantitativo Nutrição (Meta)"] = df_t1.apply(formatar_nutri_t1, axis=1)
-        df_exibir["Previsão IA (ExtraTrees)"] = df_t1["ia_pura"].astype(int).astype(str) + " ref"
-        df_exibir["Previsão Híbrida (Base Pura)"] = df_t1["pred_base_combinada"].astype(int).astype(str) + " ref"
-        df_exibir["Viabilidade da Margem"] = df_t1["status_viabilidade_margem"]
+        def formatar_ia_t1(row):
+            if not row.get("is_dia_letivo", True):
+                return "0 ref (Fechado)"
+            val = row.get("ia_pura")
+            if pd.isna(val) or val is None or not row.get("previsao_disponivel", True):
+                return "Indisponível"
+            return f"{int(val)} ref"
+
+        def formatar_base_t1(row):
+            if not row.get("is_dia_letivo", True):
+                return "0 ref (Fechado)"
+            val = row.get("pred_base_combinada")
+            if pd.isna(val) or val is None or not row.get("previsao_disponivel", True):
+                return "Indisponível"
+            return f"{int(val)} ref"
         
         def formatar_sugestao_t1(row):
             if not row.get("is_dia_letivo", True):
                 return "0 refeições (Fechado)"
-            return f"{int(row.get('sugestao_com_margem', row.get('recomendacao_final', 0)))} refeições"
+            val = row.get("recomendacao_final")
+            if pd.isna(val) or val is None or not row.get("previsao_disponivel", True):
+                return "Previsão Indisponível"
+            return f"{int(val)} refeições"
             
-        df_exibir["Sugestão com Margem"] = df_t1.apply(formatar_sugestao_t1, axis=1)
-        df_exibir["Faixa Sugerida (Mín - Máx)"] = df_t1["faixa_str"]
+        df_exibir[f"Previsão IA ({NOME_PREPARO})"] = df_t1.apply(formatar_ia_t1, axis=1)
+        df_exibir["Previsão Híbrida (Base Pura)"] = df_t1.apply(formatar_base_t1, axis=1)
+        df_exibir["Recomendação Operacional"] = df_t1.apply(formatar_sugestao_t1, axis=1)
+        df_exibir["Parecer Contextual (Heurística)"] = df_t1["status_viabilidade_margem"]
+        df_exibir["Faixa Sugerida (Heurística)"] = df_t1["faixa_str"]
         
         def formatar_alertas(al_txt):
             if not al_txt or pd.isna(al_txt):
@@ -2717,13 +2766,21 @@ elif pagina_ativa == "Simulador de Cenários":
 
     # Indicadores Principais
     c_kpi1, c_kpi2, c_kpi3, c_kpi4 = st.columns(4)
+    disp_sim = bool(resultado_sim.get("previsao_disponivel", True)) and (resultado_sim.get("pred_base") is not None)
     with c_kpi1:
-        rotulo_prod = "Previsão Mais Provável (Base)"
+        rotulo_prod = "Estimativa Central (Base Pura)"
         if not resultado_sim["is_dia_letivo"]:
             st.metric(
                 rotulo_prod,
                 "0 refeições",
                 delta="Feriado / Sem Atendimento",
+                delta_color="off"
+            )
+        elif not disp_sim:
+            st.metric(
+                rotulo_prod,
+                "—",
+                delta="Previsão Indisponível (Histórico Insuficiente)",
                 delta_color="off"
             )
         else:
@@ -2736,6 +2793,13 @@ elif pagina_ativa == "Simulador de Cenários":
     with c_kpi2:
         if not resultado_sim["is_dia_letivo"]:
             st.metric("Previsão Bruta (IA)", "0 ref", delta="Não aplicável (Fechado)", delta_color="off")
+        elif not disp_sim or resultado_sim.get("pred_ia") is None:
+            delta_ia = f"Nutrição: {int(round(resultado_sim['nutri_utilizado']))} ref" if (resultado_sim.get("nutri_utilizado") is not None and obj_chave == "consumo") else "Sem meta externa"
+            st.metric(
+                "Previsão Bruta da IA",
+                "—",
+                delta=delta_ia
+            )
         else:
             delta_ia = f"Nutrição: {int(round(resultado_sim['nutri_utilizado']))} ref" if (resultado_sim.get("nutri_utilizado") is not None and obj_chave == "consumo") else "Sem meta externa"
             st.metric(
@@ -2746,6 +2810,8 @@ elif pagina_ativa == "Simulador de Cenários":
     with c_kpi3:
         if not resultado_sim["is_dia_letivo"]:
             st.metric("Viabilidade da Margem", "Não aplicável", delta="Fechado", delta_color="off")
+        elif not disp_sim:
+            st.metric("Viabilidade da Margem", "Indisponível", delta="Histórico Insuficiente", delta_color="off")
         else:
             st.metric(
                 "Viabilidade da Margem",
@@ -2755,11 +2821,15 @@ elif pagina_ativa == "Simulador de Cenários":
     with c_kpi4:
         if not resultado_sim["is_dia_letivo"]:
             st.metric("Faixa Sugerida", "0 ref", delta="Fechado", delta_color="off")
+        elif not disp_sim or resultado_sim.get("pred_final") is None:
+            st.metric("Faixa Sugerida (Heurística)", "—", delta="Previsão Indisponível", delta_color="off")
         else:
+            sug_val = resultado_sim.get('sugestao_com_margem')
+            delta_txt = f"Parecer contextual: {int(sug_val)} ref" if sug_val is not None else f"Recomendação: {int(resultado_sim['pred_final'])} ref"
             st.metric(
-                "Faixa Sugerida (Mín - Máx)",
+                "Faixa Sugerida (Heurística)",
                 resultado_sim.get("faixa_str", "—"),
-                delta=f"Sugestão c/ margem: {resultado_sim.get('sugestao_com_margem', resultado_sim['pred_final'])} ref"
+                delta=delta_txt
             )
 
     if resultado_sim["is_dia_letivo"]:
@@ -2782,31 +2852,38 @@ elif pagina_ativa == "Simulador de Cenários":
         """, unsafe_allow_html=True)
 
     # Backtest / Confronto se a data já ocorreu
-    if resultado_sim["consumo_real"] is not None:
+    if resultado_sim.get("consumo_real") is not None:
         real_val = int(round(resultado_sim["consumo_real"]))
-        pred_val = resultado_sim["pred_final"]
-        erro_abs = abs(pred_val - real_val)
-        saldo_dia = pred_val - real_val
+        pred_val = resultado_sim.get("pred_final")
         
         with st.container(border=True):
-            st.markdown("#####  Auditoria Retroativa (Backtest da Data Real)")
-            st.caption(f"Esta data já ocorreu no histórico e possui consumo real auditado: **{real_val} refeições servidas**.")
+            tipo_sim_rotulo = resultado_sim.get("tipo_simulacao", "Simulação Retrospectiva")
+            st.markdown("##### Auditoria Retroativa (Confronto com Consumo Registrado)")
             
-            c_bt1, c_bt2, c_bt3 = st.columns(3)
-            with c_bt1:
-                st.metric("Consumo Real dos Alunos", f"{real_val} ref", delta="Auditado na catraca", delta_color="off")
-            with c_bt2:
-                st.metric("Recomendação do Modelo", f"{pred_val} ref", delta=f"Erro absoluto: {erro_abs} ref")
-            with c_bt3:
+            if pred_val is not None:
+                pred_val_int = int(round(pred_val))
+                erro_abs = abs(pred_val_int - real_val)
+                saldo_dia = pred_val_int - real_val
+                st.caption(f"Esta data possui registro de consumo: **{real_val} refeições servidas** ({tipo_sim_rotulo}).")
+                
+                c_bt1, c_bt2, c_bt3 = st.columns(3)
+                with c_bt1:
+                    st.metric("Consumo Registrado", f"{real_val} ref", delta="Refeições servidas", delta_color="off")
+                with c_bt2:
+                    st.metric("Recomendação Avaliada", f"{pred_val_int} ref", delta=f"Diferença absoluta: {erro_abs} ref")
+                with c_bt3:
+                    if saldo_dia >= 0:
+                        st.metric("Diferença em Relação ao Consumo", f"+{saldo_dia} ref", delta="Excedente potencial")
+                    else:
+                        st.metric("Diferença em Relação ao Consumo", f"{saldo_dia} ref", delta="Déficit potencial")
+                        
                 if saldo_dia >= 0:
-                    st.metric("Balanço Protetivo", f"+{saldo_dia} ref", delta="Sobra controlada / Desabastecimento evitado")
+                    st.success(f"**Confronto com Consumo Registrado:** No cenário simulado, a recomendação com margem ({pred_val_int} ref) superou o consumo registrado ({real_val} ref) em {saldo_dia} refeições (excedente potencial). Em um dia real de operação, este excedente atuaria como margem de proteção contra variações imprevistas de demanda.")
                 else:
-                    st.metric("Balanço Protetivo", f"{saldo_dia} ref", delta="Déficit potencial")
-                    
-            if saldo_dia >= 0:
-                st.success(f"**Proteção Alimentar Assegurada:** A recomendação com margem ({pred_val} ref) atendeu plenamente aos estudantes ({real_val} ref), gerando folga segura de {saldo_dia} refeições sem risco de desabastecimento.")
+                    st.warning(f"**Confronto com Consumo Registrado:** No cenário simulado, a estimativa com margem ({pred_val_int} ref) ficou {abs(saldo_dia)} refeições abaixo do consumo registrado ({real_val} ref) (déficit potencial). Em operação real, isso exigiria acionamento de contingência.")
             else:
-                st.warning(f"**Atenção:** A estimativa calculada ficou {abs(saldo_dia)} refeições abaixo da demanda real verificada. Avalie a política de margem para datas com esta volatilidade.")
+                st.caption(f"Esta data possui registro de consumo: **{real_val} refeições servidas** ({tipo_sim_rotulo}), porém a previsão algorítmica para a data de corte está indisponível para confronto quantitativo.")
+                st.info("Previsão indisponível para o corte simulado. Não foi possível calcular a diferença em relação ao consumo registrado.")
 
     # Alertas Operacionais Contextuais
     if resultado_sim["alertas"]:
@@ -2856,9 +2933,9 @@ elif pagina_ativa == "Compras & Suprimentos":
             "Ajuda a equipe de suprimentos a dimensionar pedidos quinzenais de carnes congeladas, arroz, feijão e faturamento contratual."
         ),
         como_foi_feito_ciencia=(
-f"**Modelo de Longo Prazo ({NOME_COMPRAS}, escolhido em Fev-Ago/2026):** "
-            "A 14 dias de distância, ainda não existe quantitativo institucional. "
-            "Por isso, as compras usam apenas informações disponíveis com essa antecedência."
+            f"**Modelo de Longo Prazo ({NOME_COMPRAS}, Cenário 1: Base):** "
+            "A 10 a 14 dias de distância (horizonte t+2), a decisão é autônoma e não utiliza quantitativo institucional. "
+            f"O modelo vencedor na pesquisa opera sobre o Cenário 1 (consumo recente e calendário letivo) com margem P85 de +36 refeições por quantil empírico."
         ),
         como_usar_passos=(
             "1. **Consulte a cada 15 dias** o volume quinzenal total estimado.\n"
@@ -2874,7 +2951,7 @@ f"**Modelo de Longo Prazo ({NOME_COMPRAS}, escolhido em Fev-Ago/2026):** "
     )
     
     with st.expander("Ajuste Fino de Modelo e Margens para Suprimentos (Opcional)", expanded=False):
-        st.caption(f"Modelo das compras: {NOME_COMPRAS} congelado em 31/08/2026, sem quantitativo institucional.")
+        st.caption(f"Modelo das compras: {NOME_COMPRAS} (Cenário 1: Base) congelado em 31/08/2026, sem quantitativo institucional.")
         margem_sup = st.selectbox(
             "Margem Protetiva:",
             list(MARGENS_INFO.keys()),
@@ -2882,7 +2959,7 @@ f"**Modelo de Longo Prazo ({NOME_COMPRAS}, escolhido em Fev-Ago/2026):** "
             key="cfg_mar_sup"
         )
 
-    cenario_sup = CENARIO_PADRAO
+    cenario_sup = CENARIO_COMPRAS
     modelo_nome_exec = MODELO_IA
 
     df_t2, df_feat_t2 = executar_pipeline_previsao(
@@ -2900,25 +2977,45 @@ f"**Modelo de Longo Prazo ({NOME_COMPRAS}, escolhido em Fev-Ago/2026):** "
             horizonte_rotulo="Semana t+2"
         )
 
-        total_base_t2 = int(df_t2["ia_pura"].sum())
         df_letivos_t2 = df_t2[df_t2["is_dia_letivo"] == True]
-        media_base_t2 = int(df_letivos_t2["ia_pura"].mean()) if not df_letivos_t2.empty else 0
         dias_letivos_t2_count = len(df_letivos_t2)
         dias_fechados_t2_count = len(df_t2) - dias_letivos_t2_count
+
+        df_com_prev_t2 = df_letivos_t2[df_letivos_t2["ia_pura"].notna() & (df_letivos_t2.get("previsao_disponivel", True) == True)]
+        dias_com_prev_t2_count = len(df_com_prev_t2)
+        dias_sem_prev_t2_count = dias_letivos_t2_count - dias_com_prev_t2_count
+
+        total_base_t2 = int(round(df_com_prev_t2["ia_pura"].sum())) if not df_com_prev_t2.empty else 0
+        media_base_t2 = float(df_com_prev_t2["ia_pura"].mean()) if not df_com_prev_t2.empty else 0.0
+        margem_tot_t2 = int(round(df_com_prev_t2["margem_aplicada"].sum())) if not df_com_prev_t2.empty else 0
+        margem_med_t2 = float(df_com_prev_t2["margem_aplicada"].mean()) if not df_com_prev_t2.empty else 0.0
         
         c_tot1, c_tot2, c_tot3, c_tot4 = st.columns(4)
         with c_tot1:
-            st.metric("Volume Quinzenal (Base Pura)", f"{total_base_t2:,} refeições".replace(",", "."), delta=f"+{int(df_t2['margem_aplicada'].sum())} ref de margem total")
+            if dias_com_prev_t2_count == dias_letivos_t2_count and dias_letivos_t2_count > 0:
+                st.metric("Volume da Semana T+2 (Base Pura)", f"{total_base_t2:,} refeições".replace(",", "."), delta=f"+{margem_tot_t2} ref de margem total")
+            elif dias_com_prev_t2_count > 0:
+                st.metric("Volume Parcial T+2 (Base Pura)", f"{total_base_t2:,} refeições".replace(",", "."), delta=f"{dias_com_prev_t2_count} de {dias_letivos_t2_count} dias previstos (+{margem_tot_t2} ref)")
+            else:
+                st.metric("Volume da Semana T+2 (Base Pura)", "—", delta="Previsão Indisponível", delta_color="off")
         with c_tot2:
-            st.metric("Média Diária Prevista (Base)", f"{media_base_t2} ref/dia", delta=f"{dias_letivos_t2_count} dias operacionais")
+            if dias_com_prev_t2_count > 0:
+                st.metric("Média Diária Prevista (Base)", f"{media_base_t2:.1f} ref/dia", delta=f"{dias_com_prev_t2_count} dias operacionais calculados")
+            else:
+                st.metric("Média Diária Prevista (Base)", "—", delta="Sem dados calculados", delta_color="off")
         with c_tot3:
-            st.metric("Calendário Escolar", f"{dias_letivos_t2_count} dias com atendimento", delta=f"{dias_fechados_t2_count} feriado/fechado" if dias_fechados_t2_count > 0 else "Semana 100% Letiva")
+            sub_cal_t2 = f"{dias_fechados_t2_count} feriado/fechado" if dias_fechados_t2_count > 0 else "Semana 100% Letiva"
+            if dias_sem_prev_t2_count > 0:
+                sub_cal_t2 += f" • {dias_sem_prev_t2_count} sem previsão"
+            st.metric("Calendário Escolar", f"{dias_letivos_t2_count} dias com atendimento", delta=sub_cal_t2)
         with c_tot4:
-            margem_med_t2 = int(df_letivos_t2["margem_aplicada"].mean()) if not df_letivos_t2.empty else 0
-            st.metric("Margem Protetiva Embutida", f"+{margem_med_t2} ref/dia", delta="Margem por quantil ExtraTrees")
+            if dias_com_prev_t2_count > 0:
+                st.metric("Margem Protetiva Embutida", f"+{margem_med_t2:.1f} ref/dia" if margem_med_t2 > 0 else "0 ref/dia", delta=f"Margem por quantil {NOME_COMPRAS}")
+            else:
+                st.metric("Margem Protetiva Embutida", "—", delta=f"Margem por quantil {NOME_COMPRAS}")
             
         st.markdown("---")
-        st.markdown("#### Grade Quinzenal de Compras e Sugestão de Preparo")
+        st.markdown("#### Grade de Compras e Suprimentos — Semana T+2 (Antecedência: 10 a 14 dias)")
         
         df_exibir_t2 = pd.DataFrame()
         df_exibir_t2["Data"] = df_t2["data"]
@@ -2932,16 +3029,27 @@ f"**Modelo de Longo Prazo ({NOME_COMPRAS}, escolhido em Fev-Ago/2026):** "
             lambda r: f"{obter_ico_prot(r.get('proteina_tipo', ''))} {r.get('proteina_tipo', '')} ({formatar_prep_nome(r.get('preparo_tipo', ''))})" if r.get("is_dia_letivo", True) and r.get("proteina_tipo", "—") != "—" else "—",
             axis=1
         )
-        df_exibir_t2["Previsão Base (IA Pura)"] = df_t2["ia_pura"].astype(int).astype(str) + " ref"
-        df_exibir_t2["Viabilidade da Margem"] = df_t2["status_viabilidade_margem"]
+        def formatar_ia_t2(row):
+            if not row.get("is_dia_letivo", True):
+                return "0 ref (Fechado)"
+            val = row.get("ia_pura")
+            if pd.isna(val) or val is None or not row.get("previsao_disponivel", True):
+                return "Indisponível"
+            return f"{int(val)} ref"
+
+        df_exibir_t2[f"Previsão Base ({NOME_COMPRAS})"] = df_t2.apply(formatar_ia_t2, axis=1)
         
         def formatar_sugestao_t2(row):
             if not row.get("is_dia_letivo", True):
                 return "0 refeições (Fechado)"
-            return f"{int(row.get('sugestao_com_margem', row.get('recomendacao_final', 0)))} refeições"
+            val = row.get("recomendacao_final")
+            if pd.isna(val) or val is None or not row.get("previsao_disponivel", True):
+                return "Previsão Indisponível"
+            return f"{int(val)} refeições"
             
-        df_exibir_t2["Sugestão de Compra c/ Margem"] = df_t2.apply(formatar_sugestao_t2, axis=1)
-        df_exibir_t2["Faixa Sugerida (Mín - Máx)"] = df_t2["faixa_str"]
+        df_exibir_t2["Recomendação de Compra"] = df_t2.apply(formatar_sugestao_t2, axis=1)
+        df_exibir_t2["Parecer Contextual (Heurística)"] = df_t2["status_viabilidade_margem"]
+        df_exibir_t2["Faixa Sugerida (Heurística)"] = df_t2["faixa_str"]
         df_exibir_t2["Previsão do Tempo"] = df_t2.apply(
             lambda r: f"{r['temp_max_c']:.1f}°C / {r['chuva_mm']:.1f} mm",
             axis=1
@@ -2964,12 +3072,12 @@ f"**Modelo de Longo Prazo ({NOME_COMPRAS}, escolhido em Fev-Ago/2026):** "
 elif pagina_ativa == "Cadastrar Dados":
     st.markdown('<div class="story-badge">ETAPA 5 DE 6 • ALIMENTAÇÃO CONTÍNUA & ROTINA</div>', unsafe_allow_html=True)
     st.markdown("### Lançamento e Atualização de Informações do Refeitório")
-    st.markdown('<p class="story-subtitle">Diariamente após o almoço: gaste 1 minuto para lançar o consumo verificado e manter o histórico atualizado.</p>', unsafe_allow_html=True)
+    st.markdown('<p class="story-subtitle">Diariamente após o almoço: registre o consumo verificado para manter o histórico recente atualizado.</p>', unsafe_allow_html=True)
     
     renderizar_painel_explicativo(
         objetivo_rotina=(
             "**Registrar a quantidade real de refeições servidas e atualizar o cardápio planejado.** "
-            "É essa rotina rápida de 1 minuto que mantém o histórico recente usado nas previsões sempre atualizado."
+            "É esse registro diário que mantém o histórico recente usado nas previsões sempre atualizado."
         ),
         como_foi_feito_ciencia=(
             "**Alimentação Contínua da Base Histórica (Camada Medallion):** "
@@ -3125,7 +3233,7 @@ elif pagina_ativa == "Cadastrar Dados":
             **Hierarquia de Dados e Rastreabilidade Operacional:**
             1. **Base Histórica Consolidada (Silver):** Os dados de datas anteriores são lidos diretamente da tabela fato integrada (`silver_fato_diaria.parquet`), unindo calendário letivo, consumo real apurado, estimativas e clima histórico.
             2. **Camada de Produção Dinâmica:** Qualquer edição ou novo dado inserido por você nesta tela é armazenado em `dados/producao/edicoes_operacionais.parquet` e sobreposto em tempo real. Isso garante que a base bruta de pesquisa permaneça intacta enquanto suas rotinas operacionais funcionam dinamicamente.
-            3. **Meteorologia via Satélite:** Se a data selecionada ainda não constar no arquivo histórico, o sistema consulta a previsão em tempo real diretamente da API oficial do Open-Meteo.
+            3. **Previsão Meteorológica (API Open-Meteo):** Se a data selecionada ainda não constar no arquivo histórico, o sistema consulta a previsão numérica diretamente da API do Open-Meteo.
             """)
         
         col_d1, col_d2 = st.columns([1, 2])
@@ -3205,7 +3313,7 @@ elif pagina_ativa == "Cadastrar Dados":
             <div style="background-color: #e0f7fa; border: 1px solid #80deea; border-radius: 8px; padding: 12px; text-align: center;">
                 <div style="font-size: 11px; font-weight: 700; color: #006064; text-transform: uppercase;">Meteorologia</div>
                 <div style="font-size: 18px; font-weight: 800; color: #006064; margin-top: 4px;">{dados_dia['temperature_2m_max']:.1f}°C</div>
-                <div style="font-size: 11px; color: #00838f; margin-top: 2px;">Chuva: {dados_dia['precipitation_sum']:.1f} mm ({dados_dia.get('clima_fonte', 'Satélite')})</div>
+                <div style="font-size: 11px; color: #00838f; margin-top: 2px;">Chuva: {dados_dia['precipitation_sum']:.1f} mm ({'API Open-Meteo' if 'Satélite' in str(dados_dia.get('clima_fonte', 'Open-Meteo')) else str(dados_dia.get('clima_fonte', 'API Open-Meteo'))})</div>
             </div>
             """, unsafe_allow_html=True)
             
@@ -3349,16 +3457,16 @@ elif pagina_ativa == "Cadastrar Dados":
                         )
 
 # ==============================================================================
-# PÁGINA 6: GUIA PRÁTICO (POP DE ROTINA EM 3 MINUTOS)
+# PÁGINA 6: GUIA PRÁTICO (PROCEDIMENTO OPERACIONAL PADRÃO)
 # ==============================================================================
 elif pagina_ativa == "Guia Prático":
     st.markdown('<div class="story-badge">ETAPA 6 DE 6 • MANUAL OPERACIONAL PADRÃO (POP)</div>', unsafe_allow_html=True)
     st.markdown("### Guia Prático & Procedimento Operacional Padrão (POP)")
-    st.markdown('<p class="story-subtitle">Cartilha operacional resumida em 3 minutos para apoio diário da nutricionista, da gestora e da equipe da cozinha terceirizada.</p>', unsafe_allow_html=True)
+    st.markdown('<p class="story-subtitle">Cartilha operacional de Procedimento Operacional Padrão (POP) para apoio da nutricionista, da gestora e da equipe da cozinha terceirizada.</p>', unsafe_allow_html=True)
     
     renderizar_painel_explicativo(
         objetivo_rotina=(
-            "**Servir como cartilha rápida de consulta para o dia a dia.** "
+            "**Servir como cartilha prática de consulta para o dia a dia.** "
             "Ideal para treinar novos funcionários da cozinha, estagiários de nutrição ou consultar dúvidas rápidas."
         ),
         como_foi_feito_ciencia=(
@@ -3380,7 +3488,7 @@ elif pagina_ativa == "Guia Prático":
     
     with tab_pop:
         st.markdown("""
-        #### ⏱️ Rotina Semanal em 3 Minutos
+        #### ⏱️ Cronograma Operacional Semanal
         
         1. **Toda Sexta-feira (Planejamento da Produção t+1):**
            - Acesse a página **'✍️ Cadastrar Dados'** e informe os pratos previstos para a semana seguinte.
@@ -3399,7 +3507,7 @@ elif pagina_ativa == "Guia Prático":
         #### 🌦️ Como Agir em Dias Especiais
         
         * **Dias de Tempestade / Alagamentos:**
-          Nos cenários com clima (3 e 4), a margem é zerada quando a chuva prevista chega a 15 mm. No cenário padrão, isso não acontece. Nenhum método antecipou as enchentes de setembro de 2026, então avalie a situação antes de decidir.
+          O parecer heurístico contextual sugere contenção da margem (+0 ref consultivo) para evitar excedentes quando a chuva atinge níveis severos (≥ 15 mm). A recomendação principal da pesquisa mantém a política calibrada, cabendo à gestão avaliar a situação antes de decidir.
         * **Sextas-feiras:**
           Em 2026, a média das sextas foi de 150,7 refeições, abaixo das segundas (210,0). O padrão semanal muda entre os anos.
         * **Cardápio com Carne Bovina:**
@@ -3456,7 +3564,7 @@ elif pagina_ativa == "Guia Prático":
                 rel_json = json.load(f_rel)
                 
             st.success(f"✅ **STATUS GERAL DA BASE:** {rel_json.get('status_geral', 'Não executado')}")
-            st.caption(f"Última auditoria executada em: {rel_json.get('data_auditoria', '01/11/2026')}")
+            st.caption(f"Última auditoria executada em: {rel_json.get('data_auditoria', '01/11/2026')}. Alcance: {rel_json.get('alcance', 'Cobre consumo, rótulos e oráculos na avaliação da pesquisa. Não cobre o aplicativo.')}")
             
             for teste in rel_json.get("testes", []):
                 with st.container(border=True):
